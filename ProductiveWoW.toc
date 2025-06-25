@@ -1,0 +1,14 @@
+## Interface: 11507
+## Title: ProductiveWoW
+## Notes: Spaced repetition flashcards for studying while playing. Use /flashcards
+## Author: Tuzric
+## Version: 0.1
+## RequiredDeps:
+## X-Curse-Project-ID: 999999
+## SavedVariables: ProductiveWoWSavedSettings, ProductiveWoWData
+## SavedVariablesPerCharacter:
+
+ProductiveWoWUtilities.lua
+ProductiveWoWDecks.lua
+ProductiveWoW.lua
+ProductiveWoWUI.lua
