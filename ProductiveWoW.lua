@@ -65,10 +65,52 @@ function ProductiveWoW_getCardByQuestion(deck_name, question)
 	end
 end
 
+local function createCardTable(question, answer)
+	return {
+				["question"] = question,
+				["answer"] = answer,
+				["tags"] = {},
+				["date last viewed"] = "",
+				["number of times viewed"] = 0,
+				["number of times easy"] = 0,
+				["number of times medium"] = 0,
+				["number of times hard"] = 0,
+				["difficulty"] = "hard",
+			}
+end
+
+-- Increase the views of a card
+function ProductiveWoW_viewedCard(card_id)
+	local card = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(card_id)
+	card["number of times viewed"] = card["number of times viewed"] + 1
+	card["date last viewed"] = date("*t")
+end
+
+-- Card was easy
+function ProductiveWoW_cardEasyDifficultyChosen(card_id)
+	local card = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(card_id)
+	card["number of times easy"] = card["number of times easy"] + 1
+	card["difficulty"] = "easy"
+end
+
+-- Card was medium difficulty
+function ProductiveWoW_cardMediumDifficultyChosen(card_id)
+	local card = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(card_id)
+	card["number of times medium"] = card["number of times medium"] + 1
+	card["difficulty"] = "medium"
+end
+
+-- Card was easy
+function ProductiveWoW_cardHardDifficultyChosen(card_id)
+	local card = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(card_id)
+	card["number of times hard"] = card["number of times hard"] + 1
+	card["difficulty"] = "hard"
+end
+
 -- Add a card
 function ProductiveWoW_addCard(deck_name, question, answer)
 	local next_id = ProductiveWoW_getDeck(deck_name)["next_card_id"]
-	ProductiveWoWData["decks"][deck_name]["cards"][next_id] = {["question"] = question, ["answer"] = answer}
+	ProductiveWoWData["decks"][deck_name]["cards"][next_id] = createCardTable(question, answer)
 	ProductiveWoWData["decks"][deck_name]["next_card_id"] = next_id + 1
 end
 
