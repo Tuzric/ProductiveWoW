@@ -32,7 +32,7 @@ local modifyDeckFrameName = "ModifyDeckFrame"
 local modifyDeckFrameTitlePrefix = "Modify Deck - " -- Title changes when you navigate to this frame to include the name of the deck
 local modifyDeckFrameHeight = 500
 local listOfCardsFrameRowHeight = 20
-local contextMenu -- Reference to right click context menu
+local textMenu -- Reference to right click context menu
 local rows = {}
 local listOfSelectedCardIDs = {}
 local multipleCardsSelected = false
@@ -63,6 +63,10 @@ local cardAnswerTextBoxGreyHintText = "Enter answer..."
 -- Flashcard frame
 local flashcardFrameName = "FlashcardFrame"
 local flashcardFrameTitlePrefix = "Deck: " -- Title changes to display deck name when you navigate to this frame
+
+-- Deck settings frame
+local deckSettingsFrameName = "DeckSettingsFrame"
+local deckSettingsFrameTitlePrefix = "Deck Settings - "
 
 -- FUNCTIONS
 
@@ -148,6 +152,9 @@ end
 -- Create a basic text box
 local function createTextBox(textbox_name, parent_frame, width, height, anchor_point, x_offset, y_offset, grey_hint_text)
 	local newTextBox = CreateFrame("EditBox", textbox_name, parent_frame, "InputBoxTemplate")
+	if grey_hint_text == nil then
+		grey_hint_text = ""
+	end
 	newTextBox.greyHintText = grey_hint_text
 	newTextBox:SetSize(width, height)
 	newTextBox:SetPoint(anchor_point, parent_frame, anchor_point, x_offset, y_offset)
@@ -264,7 +271,8 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 	local addCardFrame = createFrame(addCardFrameName, UIParent, addCardFrameTitle)
 	local editCardFrame = createFrame(editCardFrameName, UIParent, editCardFrameTitle)
 	local flashcardFrame = createFrame(flashcardFrameName, UIParent)
-	local multipleCardsDeletionConfirmationFrame = createFrame(multipleCardsDeletionConfirmationFrameName, UIParent,multipleCardsDeletionConfirmationFrameTitle )
+	local multipleCardsDeletionConfirmationFrame = createFrame(multipleCardsDeletionConfirmationFrameName, UIParent, multipleCardsDeletionConfirmationFrameTitle)
+	local deckSettingsFrame = createFrame(deckSettingsFrameName, UIParent, "")
 
 	-- MAIN MENU FRAME
 	-- Choose deck text
@@ -321,11 +329,16 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 
 	-- Create button to begin flashcard quiz
 	local function navigateToFlashcardFrameButtonOnClick()
-		local currentDeck = ProductiveWoWSavedSettings["currently_selected_deck"] 
-		if currentDeck ~= nil then
-			if ProductiveWoW_tableLength(ProductiveWoW_getDeckCards(currentDeck)) ~= 0 then
-				flashcardFrame.title:SetText(flashcardFrameTitlePrefix .. currentDeck)
-				return true -- Conditions for navigation passed
+		local currentDeckName = ProductiveWoW_getCurrentDeckName() 
+		if currentDeckName ~= nil then
+			if ProductiveWoW_tableLength(ProductiveWoW_getDeckCards(currentDeckName)) ~= 0 then
+				if not ProductiveWoW_isDeckCompletedForToday(currentDeckName) then
+					flashcardFrame.title:SetText(flashcardFrameTitlePrefix .. currentDeckName)
+					return true -- Conditions for navigation passed
+				else
+					print("You've already completed this deck today.")
+					return false
+				end
 			else
 				print("There are no cards in the selected deck.")
 				return false
@@ -387,7 +400,13 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 	modifyDeckFrame.navigateToAddCardButton = createNavigationButton("NavigateToAddCardButton", modifyDeckFrame, "Add Card", "TOPRIGHT", -20, -35, addCardFrame)
 
 	-- Navigate back to main menu button
-	modifyDeckFrame.navigateBackToMainMenuButton = createNavigationButton("NavigateBackToMainMenuButtonFromModifyDeckFrame", modifyDeckFrame, "Back", "BOTTOM", 0, 20, mainmenu, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
+	modifyDeckFrame.navigateBackToMainMenuButton = createNavigationButton("NavigateBackToMainMenuButtonFromModifyDeckFrame", modifyDeckFrame, "Back", "BOTTOMRIGHT", -20, 20, mainmenu, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
+
+	-- Navigate to deck settings button
+	local function navigateToDeckSettingsFrameOnClick()
+		deckSettingsFrame.title:SetText(deckSettingsFrameTitlePrefix .. ProductiveWoW_getCurrentDeckName())
+	end
+	modifyDeckFrame.navigateToDeckSettingsButton = createNavigationButton("NavigateToDeckSettingsButton", modifyDeckFrame, "Deck Settings", "BOTTOMLEFT", 20, 20, deckSettingsFrame, nil, navigateToDeckSettingsFrameOnClick)
 
 	-- Scrollable list of cards in deck
 	modifyDeckFrame.listOfCardsFrame = CreateFrame("ScrollFrame", "ListOfCardsFrame", modifyDeckFrame, "UIPanelScrollFrameTemplate")
@@ -720,6 +739,7 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 		if currentCardID ~= nil then
 			local currentQuestion = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(currentCardID)["question"]
 			flashcardFrame.displayedText:SetText(currentQuestion)
+			ProductiveWoW_viewedCard(currentCardID)
 		end
 	end
 
@@ -791,6 +811,47 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 	flashcardFrame:SetScript("OnShow", function(self)
 		ProductiveWoW_beginQuiz()
 		showNextCard()
+	end)
+
+
+	-- DECK SETTINGS FRAME --
+	-- Back button
+	deckSettingsFrame.navigateBackToModifyDeckFrameFromDeckSettingsFrameButton = createNavigationButton("NavigateBackToModifyDeckFrameFromDeckSettingsFrameButton", deckSettingsFrame, "Back", "BOTTOMRIGHT", -20, 20, modifyDeckFrame, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
+
+	-- Max cards to be tested per day text
+	deckSettingsFrame.maxCardsText = createText("TOPLEFT", deckSettingsFrame, "TOPLEFT", 20, -40, "Max Daily Cards: ")
+
+	-- Max daily cards textbox
+	deckSettingsFrame.maxCardsTextBox = createTextBox("MaxCardsTextBox", deckSettingsFrame, 40, 20, "TOPLEFT", 140, -36)
+
+	-- Save button
+	local function saveDeckSettingsButtonOnClick()
+		local anySettingChanged = false
+		local maxDailyCards = deckSettingsFrame.maxCardsTextBox:GetText()
+		local currentDeckName = ProductiveWoW_getCurrentDeckName()
+		local currentDeck = ProductiveWoW_getCurrentDeck()
+		local currentMaxDailyCards = currentDeck["daily number of cards"]
+		if not ProductiveWoW_isNumeric(maxDailyCards) then
+			print("Max daily cards has to be a number.")
+		elseif tonumber(maxDailyCards) <= 0 then
+			print("Max daily cards cannot be 0 or less than 0.")
+		elseif tonumber(maxDailyCards) == tonumber(currentMaxDailyCards) then
+			print("No changes were made so nothing was saved.")
+		else
+			ProductiveWoW_setMaxDailyCardsForDeck(currentDeckName, tonumber(maxDailyCards))
+			ProductiveWoW_setDeckNotPlayedYetToday(currentDeckName) -- When max card limit changes, reset the deck
+			anySettingChanged = true
+		end
+		if anySettingChanged == true then
+			print("Settings saved.")
+		end
+	end
+	deckSettingsFrame.saveDeckSettingsButton = createButton("SaveDeckSettingsButton", deckSettingsFrame, "Save", "BOTTOMLEFT", 20, 20, saveDeckSettingsButtonOnClick)
+
+	deckSettingsFrame:SetScript("OnShow", function()
+		local maxCards = ProductiveWoW_getCurrentDeck()["daily number of cards"]
+		deckSettingsFrame.maxCardsTextBox:SetText(maxCards)
+		deckSettingsFrame.maxCardsTextBox:SetTextColor(1, 1, 1)
 	end)
 
 end)
