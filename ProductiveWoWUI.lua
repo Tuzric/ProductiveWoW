@@ -334,6 +334,10 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 			if ProductiveWoW_tableLength(ProductiveWoW_getDeckCards(currentDeckName)) ~= 0 then
 				if not ProductiveWoW_isDeckCompletedForToday(currentDeckName) then
 					flashcardFrame.title:SetText(flashcardFrameTitlePrefix .. currentDeckName)
+					flashcardFrame.easyDifficultyButton:Hide()
+					flashcardFrame.mediumDifficultyButton:Hide()
+					flashcardFrame.hardDifficultyButton:Hide()
+					flashcardFrame.showAnswerButton:Show()
 					return true -- Conditions for navigation passed
 				else
 					print("You've already completed this deck today.")
@@ -382,7 +386,11 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 	local function deleteDeckButtonOnClick()
 		local deck_name = deleteDeckFrame.deleteDeckNameTextBox:GetText()
 		if ProductiveWoWData["decks"][deck_name] ~= nil and deck_name ~= deleteDeckNameTextBoxGreyHintText then
-			ProductiveWoW_deleteDeck(deck_name)
+			if not ProductiveWoW_inTableKeys(deck_name, ProductiveWoW_cardsToAdd) and not ProductiveWoW_ankiDeckName == deck_name then
+				ProductiveWoW_deleteDeck(deck_name)
+			else
+				print("Cannot delete this deck because it exists in ProductiveWoWDecks.lua and will just be re-added when the addon is reloaded. Remove it from that file first, reload the game by typing /reload, then come back here to delete it.")
+			end
 		else
 			print("A deck by that name does not exist.")
 		end
@@ -739,7 +747,7 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 		if currentCardID ~= nil then
 			local currentQuestion = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(currentCardID)["question"]
 			flashcardFrame.displayedText:SetText(currentQuestion)
-			ProductiveWoW_viewedCard(currentCardID)
+			ProductiveWoW_onViewedCard(currentCardID)
 		end
 	end
 

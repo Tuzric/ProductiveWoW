@@ -2,7 +2,7 @@
 ## Title: ProductiveWoW
 ## Notes: Spaced repetition flashcards for studying while playing. Use /flashcards or /fc
 ## Author: Tuzric
-## Version: 1.0
+## Version: 1.1
 ## SavedVariables: ProductiveWoWSavedSettings, ProductiveWoWData
 ## SavedVariablesPerCharacter:
 

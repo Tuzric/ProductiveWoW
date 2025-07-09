@@ -66,17 +66,17 @@ ProductiveWoW_cardsToAdd = {
 
 -- List of cards to delete from a deck
 ProductiveWoW_cardsToDelete = {
-	["Example Deck"] = {
-		"Question 1 that you want to delete",
-		"Question 2 that you want to delete"
-	}
+	-- ["Example Deck"] = {
+	-- 	"Question 1 that you want to delete",
+	-- 	"Question 2 that you want to delete"
+	-- }
 }
 
 -- Anki integration: Go to your Anki, export a deck as a .txt file, open it, copy and paste the entire contents into the variable
 -- below as a string. The function below will add it to the ProductiveWoW_cardsToAdd table which will import them into the game.
 -- RECOMMENDATION: After you've logged in and loaded the cards you added from Anki, come back to this file, and delete the Anki
 -- contents you pasted otherwise you might run into issues deleting the cards through the UI since they will be reloaded when you re-log
-local ankiDeckName = "Computer Science"
+ProductiveWoW_ankiDeckName = ""
 -- Paste contents between the 2 square brackets. E.g. [[contents]]. It can span multiple lines.
 local ankiContents = [[]]
 
@@ -93,15 +93,15 @@ local function importAnki(ankiContents)
 	local question_answer_separator = "\t"
 	local lines = split(ankiContents, line_separator)
 	local count_of_cards_added = 0
-	if (ProductiveWoW_cardsToAdd[ankiDeckName] == nil) then
-		ProductiveWoW_cardsToAdd[ankiDeckName] = {}
+	if (ProductiveWoW_cardsToAdd[ProductiveWoW_ankiDeckName] == nil) then
+		ProductiveWoW_cardsToAdd[ProductiveWoW_ankiDeckName] = {}
 	end
 	for i, line in ipairs(lines) do
 		if string.sub(line, 1, 1) ~= "#" then
 			local question_answer = split(line, question_answer_separator)
 			if question_answer ~= nil then
 				if ProductiveWoW_tableLength(question_answer) == 2 then
-					ProductiveWoW_cardsToAdd[ankiDeckName][question_answer[1]] = question_answer[2]
+					ProductiveWoW_cardsToAdd[ProductiveWoW_ankiDeckName][question_answer[1]] = question_answer[2]
 					count_of_cards_added = count_of_cards_added + 1
 				end
 			end
@@ -110,10 +110,12 @@ local function importAnki(ankiContents)
 	print(count_of_cards_added .. " cards from Anki have been imported.")
 end
 
-if not ProductiveWoW_stringContainsOnlyWhitespace(ankiDeckName) then
-	if ankiContents ~= "" then
-		importAnki(ankiContents)
+if ProductiveWoW_ankiDeckName ~= "" then
+	if not ProductiveWoW_stringContainsOnlyWhitespace(ProductiveWoW_ankiDeckName) then
+		if ankiContents ~= "" then
+			importAnki(ankiContents)
+		end
+	else
+		print("Attempt to import from Anki failed due to deck name containing only whitespace.")
 	end
-else
-	print("Attempt to import from Anki failed due to deck name containing only whitespace.")
 end
