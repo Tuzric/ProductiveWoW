@@ -386,10 +386,14 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 	local function deleteDeckButtonOnClick()
 		local deck_name = deleteDeckFrame.deleteDeckNameTextBox:GetText()
 		if ProductiveWoWData["decks"][deck_name] ~= nil and deck_name ~= deleteDeckNameTextBoxGreyHintText then
-			if not ProductiveWoW_inTableKeys(deck_name, ProductiveWoW_cardsToAdd) and not ProductiveWoW_ankiDeckName == deck_name then
-				ProductiveWoW_deleteDeck(deck_name)
+			if ProductiveWoW_tableLength(ProductiveWoW_cardsToAdd) ~= 0 then
+				if not ProductiveWoW_inTableKeys(deck_name, ProductiveWoW_cardsToAdd) and not ProductiveWoW_ankiDeckName == deck_name then
+					ProductiveWoW_deleteDeck(deck_name)
+				else
+					print("Cannot delete this deck because it exists in ProductiveWoWDecks.lua and will just be re-added when the addon is reloaded. Remove it from that file first, reload the game by typing /reload, then come back here to delete it.")
+				end
 			else
-				print("Cannot delete this deck because it exists in ProductiveWoWDecks.lua and will just be re-added when the addon is reloaded. Remove it from that file first, reload the game by typing /reload, then come back here to delete it.")
+				ProductiveWoW_deleteDeck(deck_name)
 			end
 		else
 			print("A deck by that name does not exist.")
