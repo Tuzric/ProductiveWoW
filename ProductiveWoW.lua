@@ -320,6 +320,15 @@ local function initializeCardTable()
 	return card
 end
 
+-- Update card tables with new keys that were added in newer versions of the addon
+local function updateCardValues()
+	for deckName, deck in pairs(ProductiveWoW_getAllDecks()) do
+		for cardId, card in pairs(ProductiveWoW_getDeckCards(deckName)) do
+			setCardTableMissingKeys(card)
+		end
+	end
+end
+
 -- Add a card
 function ProductiveWoW_addCard(deckName, question, answer)
 	local nextId = ProductiveWoW_getDeckNextCardId(deckName)
@@ -497,6 +506,8 @@ EventUtil.ContinueOnAddOnLoaded(ADDON_NAME, function()
 	-- It also checks if new values were added to decks from newer versions of this addon so that decks that were saved in older
 	-- versions will not cause any bugs
 	updateDeckValues()
+	-- Update cards with new keys added since newer versions of the addon
+	updateCardValues()
 
 	-- SLASH COMMANDS --
 	-- SLASH_ prefix is required and used by WoW to find the slash commands automatically. These variables have to be global
