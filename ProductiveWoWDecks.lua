@@ -1,3 +1,5 @@
+-- v1.2
+
 -- IMPORTANT NOTE: Double check you closed off all the brackets (both curly and square) and that you added all the commas and quotes properly.
 -- if the addon doesn't load, it's because you messed up something here
 
@@ -118,4 +120,6 @@ if ProductiveWoW_ankiDeckName ~= "" then
 	else
 		print("Attempt to import from Anki failed due to deck name containing only whitespace.")
 	end
+else
+	print("Could not import Anki deck. You need to give the deck a name in the ProductiveWoW_ankiDeckName variable.")
 end

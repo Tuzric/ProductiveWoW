@@ -1,3 +1,5 @@
+-- v1.2
+
 -- INITIALIZE VARIABLES
 -- Variables for all frames
 local ProductiveWoW_allFrames = {} -- Keep track of list of all frames
@@ -17,7 +19,7 @@ local basicButtonHeight = 30
 
 -- Main menu frame
 local mainMenuFrameName = "MainMenuFrame"
-local mainMenuFrameTitle = "ProductiveWoW"
+local mainMenuFrameTitle = ProductiveWoW_ADDON_NAME .. " " .. ProductiveWoW_ADDON_VERSION
 
 -- Create deck frame
 local createDeckFrameName = "CreateDeckFrame"
@@ -30,10 +32,16 @@ local deleteDeckFrameTitle = "Delete Deck"
 -- Modify deck frame
 local modifyDeckFrameName = "ModifyDeckFrame"
 local modifyDeckFrameTitlePrefix = "Modify Deck - " -- Title changes when you navigate to this frame to include the name of the deck
+local modifyDeckFrameWidth = 450
 local modifyDeckFrameHeight = 500
 local listOfCardsFrameRowHeight = 20
 local textMenu -- Reference to right click context menu
+local pages = {}
+local currentPageIndex = 1
+local maximumPages = 1
+local numberOfRowsPerPage = 100
 local rows = {}
+local currentNumberOfRowsOnPage = 0 -- Used to keep track when this reaches 0 when a user deletes enough cards, to auto-switch to the previous page
 local listOfSelectedCardIDs = {}
 local multipleCardsSelected = false
 local editCardButtonOnClick -- Function
@@ -41,6 +49,8 @@ local deleteCardButtonOnClick -- Function
 local unselectAllRows -- Function to unselect all rows
 local selectRow -- Function to select a single row
 local unselectRow -- Function to unselect a single row
+local populateRows -- Function to populate rows of cards for the current page
+local createPages -- Function to create the pages of cards
 
 -- Confirmation box that appears when you attempt to delete multiple selected cards
 local multipleCardsDeletionConfirmationFrameName = "MultipleCardsDeletionConfirmationFrame"
@@ -267,7 +277,7 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 	local mainmenu = createFrame(mainMenuFrameName, UIParent, mainMenuFrameTitle)
 	local createDeckFrame = createFrame(createDeckFrameName, UIParent, createDeckFrameTitle)
 	local deleteDeckFrame = createFrame(deleteDeckFrameName, UIParent, deleteDeckFrameTitle)
-	local modifyDeckFrame = createFrame(modifyDeckFrameName, UIParent, "", basicFrameWidth, modifyDeckFrameHeight)
+	local modifyDeckFrame = createFrame(modifyDeckFrameName, UIParent, "", modifyDeckFrameWidth, modifyDeckFrameHeight)
 	local addCardFrame = createFrame(addCardFrameName, UIParent, addCardFrameTitle)
 	local editCardFrame = createFrame(editCardFrameName, UIParent, editCardFrameTitle)
 	local flashcardFrame = createFrame(flashcardFrameName, UIParent)
@@ -340,7 +350,7 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 					flashcardFrame.showAnswerButton:Show()
 					return true -- Conditions for navigation passed
 				else
-					print("You've already completed this deck today.")
+					print("You've already completed this deck today. If you would like to play it again, go to Modify Deck > Deck Settings > Change the value of Max Daily Cards.")
 					return false
 				end
 			else
@@ -419,6 +429,43 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 		deckSettingsFrame.title:SetText(deckSettingsFrameTitlePrefix .. ProductiveWoW_getCurrentDeckName())
 	end
 	modifyDeckFrame.navigateToDeckSettingsButton = createNavigationButton("NavigateToDeckSettingsButton", modifyDeckFrame, "Deck Settings", "BOTTOMLEFT", 20, 20, deckSettingsFrame, nil, navigateToDeckSettingsFrameOnClick)
+
+	-- Current page text
+	modifyDeckFrame.currentPageText = createText("CENTER", modifyDeckFrame, "BOTTOM", 0, 35, "")
+
+	-- Next page button
+	local function nextPageButtonOnClick()
+		local nextPageIndex = currentPageIndex + 1
+		if nextPageIndex <= maximumPages then
+			currentPageIndex = nextPageIndex
+			createPages()
+			populateRows()
+			modifyDeckFrame.currentPageText:SetText(currentPageIndex .. " of " .. maximumPages)
+			modifyDeckFrame.listOfCardsFrame:SetVerticalScroll(0)
+		end
+		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+	end
+	modifyDeckFrame.nextPageButton = createButton("NextPageButton", modifyDeckFrame, "", "BOTTOM", 58, 20, nextPageButtonOnClick)
+	modifyDeckFrame.nextPageButton:SetSize(30, 30)
+	modifyDeckFrame.nextPageButton:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up")
+	modifyDeckFrame.nextPageButton:SetPushedTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Down")
+
+	-- Previous page button
+	local function previousPageButtonOnClick()
+		local prevPageIndex = currentPageIndex - 1
+		if prevPageIndex >= 1 then
+			currentPageIndex = currentPageIndex - 1
+			createPages()
+			populateRows()
+			modifyDeckFrame.currentPageText:SetText(currentPageIndex .. " of " .. maximumPages)
+			modifyDeckFrame.listOfCardsFrame:SetVerticalScroll(0)
+		end
+		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+	end
+	modifyDeckFrame.previousPageButton = createButton("PreviousPageButton", modifyDeckFrame, "", "BOTTOM", -58, 20, previousPageButtonOnClick)
+	modifyDeckFrame.previousPageButton:SetSize(30, 30)
+	modifyDeckFrame.previousPageButton:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Up")
+	modifyDeckFrame.previousPageButton:SetPushedTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Down")
 
 	-- Scrollable list of cards in deck
 	modifyDeckFrame.listOfCardsFrame = CreateFrame("ScrollFrame", "ListOfCardsFrame", modifyDeckFrame, "UIPanelScrollFrameTemplate")
@@ -562,14 +609,37 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 
 	-- Column headers
 	modifyDeckFrame.questionColumnHeader = createText("TOPLEFT", modifyDeckFrame, "TOPLEFT", 16, -70, "Question")
-	modifyDeckFrame.answerColumnHeader = createText("TOPLEFT", modifyDeckFrame, "TOPLEFT", 185, -70, "Answer")
+	modifyDeckFrame.answerColumnHeader = createText("TOPLEFT", modifyDeckFrame, "TOPLEFT", 238, -70, "Answer")
+
+	-- Create the pages of cards in case there are so many cards that pages are needed to prevent a performance hit
+	function createPages()
+		pages = {}
+		local cards = ProductiveWoW_getDeckCards(ProductiveWoWSavedSettings["currently_selected_deck"])
+		local cardCounter = 0
+		local currentPage = {}
+		for cardId, card in pairs(cards) do
+			currentPage[cardId] = card
+			cardCounter = cardCounter + 1
+			if cardCounter % numberOfRowsPerPage == 0 then
+				table.insert(pages, ProductiveWoW_tableShallowCopy(currentPage))
+				currentPage = {}
+				cardCounter = 0
+			end
+		end
+		-- Add final page since the loop won't add the final page because the modulo condition is not met if the # of rows < numberOfRowsPerPage for the final page
+		if ProductiveWoW_tableLength(currentPage) ~= 0 then
+			table.insert(pages, ProductiveWoW_tableShallowCopy(currentPage))
+		end
+		maximumPages = ProductiveWoW_tableLength(pages)
+	end
 	
 	-- Populate rows. This function creates a Frame for each row, since we can't delete frames, everytime it's repopulated when you switch a deck,
 	-- we will need to reuse the existing row Frames just changing their text. New row Frames are only created when we have exhausted 
 	-- all the existing row Frames. If we switch from Deck A which has 5 rows to Deck B which has 3 rows, we need to set the text of the 2 extra rows to blank
-	local function populateRows()
-		local cards = ProductiveWoW_getDeckCards(ProductiveWoWSavedSettings["currently_selected_deck"])
+	function populateRows()
+		local cards = pages[currentPageIndex]
 		local table_index = 1 -- Need to increment index manually since card_id may not be continuous due to deletion of cards
+		currentNumberOfRowsOnPage = ProductiveWoW_tableLength(cards)
 		for card_id, content in pairs(cards) do
 			local row = rows[table_index]
 			if row == nil then -- if this row index does not already exist
@@ -595,7 +665,9 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 	end
 	-- Re-populate rows when frame is shown
 	modifyDeckFrame:SetScript("OnShow", function(self)
+		createPages()
 		populateRows()
+		modifyDeckFrame.currentPageText:SetText(currentPageIndex .. " of " .. maximumPages)
 	end)
 
 	function editCardButtonOnClick(card_id)
@@ -626,7 +698,14 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 		end
 		ProductiveWoW_deleteCardByID(current_deck, card_id)
 		print("Successfully deleted card: " .. card["question"])
-		populateRows()
+		currentNumberOfRowsOnPage = currentNumberOfRowsOnPage - 1
+		if currentNumberOfRowsOnPage == 0 and ProductiveWoW_tableLength(pages) ~= 0 then
+			previousPageButtonOnClick()
+		else
+			unselectAllRows()
+			createPages()
+			populateRows()
+		end
 	end
 
 	

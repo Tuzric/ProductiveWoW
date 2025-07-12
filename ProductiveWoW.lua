@@ -1,8 +1,14 @@
+-- v1.2
+
 -- INITIALIZE VARIABLES --
+-- GLOBALS --
+--------------------------------------------------------------------------------------------------------------------------------
+ProductiveWoW_ADDON_NAME = "ProductiveWoW"
+ProductiveWoW_ADDON_VERSION = "v1.2"
+
 
 -- CONSTANTS --
 --------------------------------------------------------------------------------------------------------------------------------
-local ADDON_NAME = "ProductiveWoW"
 local EASY = "easy" -- Constant string value representing the Easy difficulty of a card
 local MEDIUM = "medium" -- Constant string value representing the Medium difficulty of a card
 local HARD = "hard" -- Constant string value representing the Hard difficulty of a card
@@ -44,7 +50,7 @@ local cardTableDefaultValues = {[QUESTION_KEY] = "", [ANSWER_KEY] = "", [DIFFICU
 
 -- QUIZ VARIABLES -- 
 --------------------------------------------------------------------------------------------------------------------------------
-local currentSubsetOfCardsBeingQuizzedIDs = {} -- When you press "Go" to start the quiz, this table stores the subset of Card IDs from the deck that is being quizzed
+ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs = {} -- When you press "Go" to start the quiz, this table stores the subset of Card IDs from the deck that is being quizzed
 local currentCardID = nil -- Tracks the Card ID of the current card being shown to the user in the quiz
 local timeWhenDeckCanBePlayedAgain = 10 -- Each new day, the deck can be played again at 10am regardless if 24h has passed or not
 
@@ -464,12 +470,12 @@ end
 
 -- Draw random next card
 function ProductiveWoW_drawRandomNextCard()
-	local numCards = ProductiveWoW_tableLength(currentSubsetOfCardsBeingQuizzedIDs)
+	local numCards = ProductiveWoW_tableLength(ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs)
 	local currentDeckName = ProductiveWoW_getCurrentDeckName()
 	if numCards >= 1 then
 		local randomIndex = math.random(1, numCards)
-		currentCardID = currentSubsetOfCardsBeingQuizzedIDs[randomIndex]
-		table.remove(currentSubsetOfCardsBeingQuizzedIDs, random_index)
+		currentCardID = ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs[randomIndex]
+		table.remove(ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs, random_index)
 		table.remove(ProductiveWoW_getDeckListOfRemainingCardsToday(currentDeckName), randomIndex)
 	else
 		ProductiveWoW_setDeckCompletedForToday(ProductiveWoW_getCurrentDeckName())
@@ -482,9 +488,9 @@ end
 function ProductiveWoW_beginQuiz()
 	local currentDeckName = ProductiveWoW_getCurrentDeckName()
 	-- Load the subset of cards to be quizzed on
-	currentSubsetOfCardsBeingQuizzedIDs = getDeckSubsetForQuiz()
+	ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs = getDeckSubsetForQuiz()
 	if ProductiveWoW_isDeckNotPlayedYetToday(currentDeckName) then
-		setDeckStartedToday(currentDeckName, currentSubsetOfCardsBeingQuizzedIDs)
+		setDeckStartedToday(currentDeckName, ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs)
 	end
 	ProductiveWoW_drawRandomNextCard()
 end
@@ -494,7 +500,7 @@ end
 
 
 -- Required to run in this block to ensure that saved variables are loaded before this code runs
-EventUtil.ContinueOnAddOnLoaded(ADDON_NAME, function()
+EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 	-- DEBUG AND DEV ONLY: Uncomment to reset saved variables on addon load
 	-- ProductiveWoWSavedSettings = {["currently_selected_deck"] = nil}
 	-- ProductiveWoWData = {["decks"] = {}}
@@ -515,7 +521,7 @@ EventUtil.ContinueOnAddOnLoaded(ADDON_NAME, function()
 	SLASH_ProductiveWoW2 = "/flashcards"
 	SLASH_ProductiveWoW3 = "/flashcard"
 	SLASH_ProductiveWoW4 = "/fc"
-	SlashCmdList[ADDON_NAME] = function()
+	SlashCmdList[ProductiveWoW_ADDON_NAME] = function()
 		if ProductiveWoW_anyFrameIsShown() then
 			ProductiveWoW_hideAllFrames()
 		else
