@@ -120,6 +120,6 @@ if ProductiveWoW_ankiDeckName ~= "" then
 	else
 		print("Attempt to import from Anki failed due to deck name containing only whitespace.")
 	end
-else
+elseif ankiContents ~= "" then
 	print("Could not import Anki deck. You need to give the deck a name in the ProductiveWoW_ankiDeckName variable.")
 end

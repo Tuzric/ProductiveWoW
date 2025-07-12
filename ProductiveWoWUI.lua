@@ -431,7 +431,7 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 	modifyDeckFrame.navigateToDeckSettingsButton = createNavigationButton("NavigateToDeckSettingsButton", modifyDeckFrame, "Deck Settings", "BOTTOMLEFT", 20, 20, deckSettingsFrame, nil, navigateToDeckSettingsFrameOnClick)
 
 	-- Current page text
-	modifyDeckFrame.currentPageText = createText("CENTER", modifyDeckFrame, "BOTTOM", 0, 35, "")
+	modifyDeckFrame.currentPageText = createText("CENTER", modifyDeckFrame, "BOTTOM", 0, 35, "1 of 1")
 
 	-- Next page button
 	local function nextPageButtonOnClick()
@@ -630,6 +630,9 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 		if ProductiveWoW_tableLength(currentPage) ~= 0 then
 			table.insert(pages, ProductiveWoW_tableShallowCopy(currentPage))
 		end
+		if ProductiveWoW_tableLength(pages) == 0 then
+			pages = {{}}
+		end
 		maximumPages = ProductiveWoW_tableLength(pages)
 	end
 	
@@ -639,23 +642,25 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 	function populateRows()
 		local cards = pages[currentPageIndex]
 		local table_index = 1 -- Need to increment index manually since card_id may not be continuous due to deletion of cards
-		currentNumberOfRowsOnPage = ProductiveWoW_tableLength(cards)
-		for card_id, content in pairs(cards) do
-			local row = rows[table_index]
-			if row == nil then -- if this row index does not already exist
-				row = createRow(table_index)
-				rows[table_index] = row
+		currentNumberOfRowsOnPage = 0
+		if cards ~= nil then
+			currentNumberOfRowsOnPage = ProductiveWoW_tableLength(cards)
+			for card_id, content in pairs(cards) do
+				local row = rows[table_index]
+				if row == nil then -- if this row index does not already exist
+					row = createRow(table_index)
+					rows[table_index] = row
+				end
+				row.question:SetText(content["question"])
+				row.answer:SetText(content["answer"])
+				row.card_id = card_id
+				row.selected = false
+				row:Show()
+				table_index = table_index + 1
 			end
-			row.question:SetText(content["question"])
-			row.answer:SetText(content["answer"])
-			row.card_id = card_id
-			row.selected = false
-			row:Show()
-			table_index = table_index + 1
 		end
 		-- Set text to blank for additional rows if current deck has fewer rows than the previously selected deck
-		local numCardsInCurrentDeck = ProductiveWoW_tableLength(cards)
-		for i = numCardsInCurrentDeck + 1, ProductiveWoW_tableLength(rows) do
+		for i = currentNumberOfRowsOnPage + 1, ProductiveWoW_tableLength(rows) do
 			rows[i].question:SetText("")
 			rows[i].answer:SetText("")
 			rows[i]:Hide()
@@ -665,6 +670,7 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 	end
 	-- Re-populate rows when frame is shown
 	modifyDeckFrame:SetScript("OnShow", function(self)
+		currentPageIndex = 1
 		createPages()
 		populateRows()
 		modifyDeckFrame.currentPageText:SetText(currentPageIndex .. " of " .. maximumPages)
@@ -699,7 +705,8 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 		ProductiveWoW_deleteCardByID(current_deck, card_id)
 		print("Successfully deleted card: " .. card["question"])
 		currentNumberOfRowsOnPage = currentNumberOfRowsOnPage - 1
-		if currentNumberOfRowsOnPage == 0 and ProductiveWoW_tableLength(pages) ~= 0 then
+		if currentNumberOfRowsOnPage == 0 and ProductiveWoW_tableLength(pages) >= 2 then
+			-- If 2 or more pages, go to previous page
 			previousPageButtonOnClick()
 		else
 			unselectAllRows()
