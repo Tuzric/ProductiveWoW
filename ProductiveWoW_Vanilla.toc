@@ -5,6 +5,7 @@
 ## Version: 1.2
 ## SavedVariables: ProductiveWoWSavedSettings, ProductiveWoWData
 ## SavedVariablesPerCharacter:
+## X-Curse-Project-ID: 1301767
 
 ProductiveWoWUtilities.lua
 ProductiveWoWDecks.lua

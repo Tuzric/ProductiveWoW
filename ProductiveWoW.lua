@@ -502,8 +502,8 @@ end
 -- Required to run in this block to ensure that saved variables are loaded before this code runs
 EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 	-- DEBUG AND DEV ONLY: Uncomment to reset saved variables on addon load
-	-- ProductiveWoWSavedSettings = {["currently_selected_deck"] = nil}
-	-- ProductiveWoWData = {["decks"] = {}}
+	ProductiveWoWSavedSettings = {["currently_selected_deck"] = nil}
+	ProductiveWoWData = {["decks"] = {}}
 
 	-- Import decks from ProductiveWoWDecks.lua
 	ProductiveWoW_importDecks()
