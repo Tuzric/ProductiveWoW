@@ -12,10 +12,29 @@ function ProductiveWoW_tableLength(tbl)
 	return count
 end
 
+-- Check if a table is an array
+function ProductiveWoW_tableIsArray(tbl)
+	if type(tbl) ~= "table" then
+		return false
+	end
+	local count = 0
+	for key, val in pairs(tbl) do
+		if type(key) ~= "number" then
+			return false
+		elseif key <= 0 or math.floor(key) ~= key then
+			return false
+		elseif key ~= (count + 1) then
+			return false
+		end
+		count = count + 1
+	end
+	return ProductiveWoW_tableLength(tbl) == count
+end
+
 -- Check if a value exists in a table's keys
-function ProductiveWoW_inTableKeys(value_to_check, tbl)
+function ProductiveWoW_inTableKeys(valueToCheck, tbl)
 	for key, value in pairs(tbl) do
-		if key == value_to_check then
+		if key == valueToCheck then
 			return true
 		end
 	end
@@ -24,6 +43,9 @@ end
 
 -- Remove an element from an array by value
 function ProductiveWoW_removeByValue(value, tbl)
+	if not ProductiveWoW_tableIsArray(tbl) then
+		error("Table has to be an array-type table.")
+	end
 	for i = #tbl, 1, -1 do
 		if (tbl[i] == value) then
 			table.remove(tbl, i)
@@ -57,23 +79,6 @@ function ProductiveWoW_mergeTables(tbl1, tbl2)
 		end
 		return tbl1
 	end
-end
-
--- Check if a table is an array
-function ProductiveWoW_tableIsArray(tbl)
-	if type(tbl) ~= "table" then
-		return false
-	end
-	local count = 0
-	for key, val in pairs(tbl) do
-		if type(key) ~= "number" then
-			return false
-		elseif key <= 0 or math.floor(key) ~= key then
-			return false
-		end
-		count = count + 1
-	end
-	return ProductiveWoW_tableLength(tbl) == count
 end
 
 -- Get random subset of size n from table

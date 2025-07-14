@@ -1,39 +1,184 @@
 -- v1.2
 
 -- INITIALIZE VARIABLES
+--------------------------------------------------------------------------------------------------------------------------------
+-- CONSTANTS
+-- Frame anchor points
+local TOP = "TOP"
+local TOPLEFT = "TOPLEFT"
+local TOPRIGHT = "TOPRIGHT"
+local LEFT = "LEFT"
+local CENTER = "CENTER"
+local RIGHT = "RIGHT"
+local BOTTOM = "BOTTOM"
+local BOTTOMLEFT = "BOTTOMLEFT"
+local BOTTOMRIGHT = "BOTTOMRIGHT"
+-- Frame types and templates
+local FRAME = "Frame"
+local BUTTON = "Button"
+local EDITBOX = "EditBox"
+local DROPDOWN_BUTTON = "DropdownButton"
+local BASIC_FRAME_TEMPLATE_WITH_INSET = "BasicFrameTemplateWithInset"
+local UI_PANEL_BUTTON_TEMPLATE = "UIPanelButtonTemplate"
+local INPUT_BOX_TEMPLATE = "InputBoxTemplate"
+local WOW_STYLE_1_DROPDOWN_TEMPLATE = "WowStyle1DropdownTemplate"
+-- Text
+local OVERLAY = "OVERLAY"
+local GAME_FONT_NORMAL = "GameFontNormal"
+local GAME_FONT_HIGHLIGHT = "GameFontHighlight"
+local JUSTIFY_LEFT = "LEFT"
+local JUSTIFY_RIGHT = "RIGHT"
+-- Colours
+local GREY = {0.5, 0.5, 0.5}
+local WHITE = {1, 1, 1}
+-- Mouse/keyboard buttons
+local MOUSE_RIGHT = "RightButton"
+local MOUSE_LEFT = "LeftButton"
+-- Events
+local ON_MOUSE_DRAG_START = "OnDragStart"
+local ON_MOUSE_DRAG_STOP = "OnDragStop"
+local ON_CLICK = "OnClick"
+local ON_EDIT_FOCUS_GAINED = "OnEditFocusGained"
+local ON_EDIT_FOCUS_LOST = "OnEditFocusLost"
+local ON_ENTER_PRESSED = "OnEnterPressed"
+local ON_MOUSE_DOWN = "OnMouseDown"
+local ON_SHOW = "OnShow"
+
+
 -- Variables for all frames
-local ProductiveWoW_allFrames = {} -- Keep track of list of all frames
+local ProductiveWoWAllFrames = {} -- Keep track of list of all frames
 local basicFrameWidth = 350 -- Frame width for most ProductiveWoW frames
 local basicFrameHeight = 150 -- Frame height for most ProductiveWoW frames
 local menuCurrentXOffsetFromCenter = 200 -- Track position by X offset from center of UIParent. These 2 variables are updated when a user drags the frame so that when they click a button to navigate to another frame, the next frame that opens up is opened in the same position as the previous frame
 local menuCurrentYOffsetFromCenter = 200 -- Same as above, but for Y offset
-local menuCurrentAnchorPoint = "CENTER"
+local menuCurrentAnchorPoint = CENTER
 local menuCurrentAnchorRelativeTo = UIParent
-local menuCurrentRelativePoint = "CENTER"
+local menuCurrentRelativePoint = CENTER
 local basicFrameTitleBackgroundHeight = 30
 local basicFrameTitleOffsetXFromTopLeft = 5
 local basicFrameTitleOffsetYFromTopLeft = -3
 local basicButtonWidth = 100
 local basicButtonHeight = 30
 
-
 -- Main menu frame
+local mainMenu
 local mainMenuFrameName = "MainMenuFrame"
 local mainMenuFrameTitle = ProductiveWoW_ADDON_NAME .. " " .. ProductiveWoW_ADDON_VERSION
+-- Main menu choose deck text
+local mainMenuChooseDeckTextAnchor = TOPLEFT
+local mainMenuChooseDeckTextParentAnchor = TOPLEFT
+local mainMenuChooseDeckTextXOffset = 15
+local mainMenuChooseDeckTextYOffset = -40
+local mainMenuChooseDeckTextValue = "Choose deck:"
+-- Main menu choose deck dropdown
+local mainMenuChooseDeckDropdownName = "ChooseDeckDropdown"
+local chooseDeckDropdownGeneratorFunction -- Function for generating dropdown contents
+local mainMenuChooseDeckDropdownWidth = 100
+local mainMenuChooseDeckDropdownHeight = 25
+local mainMenuChooseDeckDropdownAnchor = TOPLEFT
+local mainMenuChooseDeckDropdownParentAnchor = TOPLEFT
+local mainMenuChooseDeckDropdownXOffset = 100
+local mainMenuChooseDeckDropdownYOffset = -35
+-- Create deck button
+local mainMenuNavigateToCreateDeckButtonName = "NavigateToCreateDeckFromMainMenu"
+local mainMenuNavigateToCreateDeckButtonAnchor = TOPLEFT
+local mainMenuNavigateToCreateDeckButtonXOffset = 15
+local mainMenuNavigateToCreateDeckButtonYOffset = -60
+local mainMenuNavigateToCreateDeckButtonText = "Create Deck"
+-- Delete deck button
+local mainMenuNavigateToDeleteDeckButtonName = "NavigateToDeleteDeckFromMainMenu"
+local mainMenuNavigateToDeleteDeckButtonAnchor = TOPLEFT
+local mainMenuNavigateToDeleteDeckButtonXOffset = 15
+local mainMenuNavigateToDeleteDeckButtonYOffset = -90
+local mainMenuNavigateToDeleteDeckButtonText = "Delete Deck"
+-- Modify deck button
+local mainMenuNavigateToModifyDeckButtonName = "NavigateToModifyDeckFromMainMenu"
+local mainMenuNavigateToModifyDeckButtonAnchor = TOPLEFT
+local mainMenuNavigateToModifyDeckButtonXOffset = 230
+local mainMenuNavigateToModifyDeckButtonYOffset = -32
+local mainMenuNavigateToModifyDeckButtonText = "Modify Deck"
+local mainMenuNavigateToModifyDeckButtonNoDeckSelectedMessage = "No deck is currently selected."
+-- Begin quiz "Go" button
+local mainMenuNavigateToFlashcardFrameButtonName = "NavigateToFlashcardFrameFromMainMenu"
+local mainMenuNavigateToFlashcardFrameButtonText = "Go"
+local mainMenuNavigateToFlashcardFrameButtonAnchor = TOPLEFT
+local mainMenuNavigateToFlashcardFrameButtonXOffset = 230
+local mainMenuNavigateToFlashcardFrameButtonYOffset = -92
+local mainMenuNavigateToFlashcardFrameButtonAlreadyCompletedDeckTodayMessage = "You've already completed this deck today. If you would like to play it again, go to Modify Deck > Deck Settings > Change the value of Max Daily Cards."
+local mainMenuNavigateToFlashcardFrameButtonNoCardsInDeckMessage = "There are no cards in the selected deck."
+local mainMenuNavigateToFlashcardFrameButtonNoSelectedDeckMessage = "No deck is currently selected."
 
 -- Create deck frame
+local createDeckFrame
 local createDeckFrameName = "CreateDeckFrame"
 local createDeckFrameTitle = "Create Deck"
+-- Create deck textbox
+local createDeckFrameDeckNameTextBoxGreyHintText = "Deck name..."
+local createDeckFrameDeckNameTextBoxName = "CreateDeckTextBox"
+local createDeckFrameDeckNameTextBoxAnchor = CENTER
+local createDeckFrameDeckNameTextBoxXOffset = 0
+local createDeckFrameDeckNameTextBoxYOffset = 0
+local createDeckFrameDeckNameTextBoxWidth = 200
+local createDeckFrameDeckNameTextBoxHeight = 25
+local createDeckFrameCreateDeckButtonBlankNameMessage = "Deck name was blank so no deck was created."
+local createDeckFrameCreateDeckButtonDeckAlreadyExistsMessage = "A deck by that name already exists."
+-- Create deck button
+local createDeckFrameCreateDeckButtonName = "CreateDeckButton"
+local createDeckFrameCreateDeckButtonText = "Create"
+local createDeckFrameCreateDeckButtonAnchor = CENTER
+local createDeckFrameCreateDeckButtonXOffset = 0
+local createDeckFrameCreateDeckButtonYOffset = -40
+local createDeckFrameCreateDeckButtonSound = SOUNDKIT.IG_CHARACTER_INFO_CLOSE
 
 -- Delete deck frame
+local deleteDeckFrame
 local deleteDeckFrameName = "DeleteDeckFrame"
 local deleteDeckFrameTitle = "Delete Deck"
+-- Delete deck textbox
+local deleteDeckFrameDeckNameTextBoxName = "DeleteDeckTextBox"
+local deleteDeckFrameDeckNameTextBoxGreyHintText = "Enter deck name to delete..."
+local deleteDeckFrameDeckNameTextBoxAnchor = CENTER
+local deleteDeckFrameDeckNameTextBoxXOffset = 0
+local deleteDeckFrameDeckNameTextBoxYOffset = 0
+local deleteDeckFrameDeckNameTextBoxWidth = 200
+local deleteDeckFrameDeckNameTextBoxHeight = 25
+local deleteDeckFrameDeleteDeckButtonDeckExistsInBulkImportFileMessage = "Cannot delete this deck because it exists in ProductiveWoWDecks.lua and will just be re-added when the addon is reloaded. Remove it from that file first, reload the game by typing /reload, then come back here to delete it."
+local deleteDeckFrameDeleteDeckButtonDeckDoesNotExistMessage = "A deck by that name does not exist."
+-- Delete deck button
+local deleteDeckFrameDeleteDeckButtonName = "DeleteDeckButton"
+local deleteDeckFrameDeleteDeckButtonText = "Delete"
+local deleteDeckFrameDeleteDeckButtonAnchor = CENTER
+local deleteDeckFrameDeleteDeckButtonXOffset = 0
+local deleteDeckFrameDeleteDeckButtonYOffset = -40
+local deleteDeckFrameDeleteDeckButtonSound = SOUNDKIT.IG_CHARACTER_INFO_CLOSE
 
 -- Modify deck frame
+local modifyDeckFrame
 local modifyDeckFrameName = "ModifyDeckFrame"
 local modifyDeckFrameTitlePrefix = "Modify Deck - " -- Title changes when you navigate to this frame to include the name of the deck
 local modifyDeckFrameWidth = 450
 local modifyDeckFrameHeight = 500
+-- Card list text
+local modifyDeckFrameCardListTextName = "CardListText"
+local modifyDeckFrameCardListTextValue = "Card list:"
+local modifyDeckFrameCardListTextAnchor = TOPLEFT
+local modifyDeckFrameCardListTextParentAnchor = TOPLEFT
+local modifyDeckFrameCardListTextXOffset = 15
+local modifyDeckFrameCardListTextYOffset = -42
+-- Navigate to add card frame button
+local modifyDeckFrameNavigateToAddCardButtonName = "NavigateToAddCardFromModifyDeckButton"
+local modifyDeckFrameNavigateToAddCardButtonText = "Add Card"
+local modifyDeckFrameNavigateToAddCardButtonAnchor = TOPRIGHT
+local modifyDeckFrameNavigateToAddCardButtonXOffset = -20
+local modifyDeckFrameNavigateToAddCardButtonYOffset = -35
+-- Navigate to main menu button
+local modifyDeckFrameNavigateToMainMenuButtonName = "NavigateToMainMenuFromModifyDeckButton"
+local modifyDeckFrameNavigateToMainMenuButtonText = "Back"
+local modifyDeckFrameNavigateToMainMenuButtonAnchor = BOTTOMRIGHT
+local modifyDeckFrameNavigateToMainMenuButtonXOffset = -20
+local modifyDeckFrameNavigateToMainMenuButtonYOffset = 20
+local modifyDeckFrameNavigateToMainMenuButtonSound = SOUNDKIT.IG_CHARACTER_INFO_CLOSE
+
 local listOfCardsFrameRowHeight = 20
 local textMenu -- Reference to right click context menu
 local pages = {}
@@ -53,15 +198,18 @@ local populateRows -- Function to populate rows of cards for the current page
 local createPages -- Function to create the pages of cards
 
 -- Confirmation box that appears when you attempt to delete multiple selected cards
+local multipleCardsDeletionConfirmationFrame
 local multipleCardsDeletionConfirmationFrameName = "MultipleCardsDeletionConfirmationFrame"
 local multipleCardsDeletionConfirmationFrameTitle = "Confirm Deletion"
 local multipleCardsDeletionConfirmationFrameText = "Are you sure you want to delete all the selected cards?"
 
 -- Add card frame
+local addCardFrame
 local addCardFrameName = "AddCardFrame"
 local addCardFrameTitle = "Add Card"
 
 -- Edit card frame
+local editCardFrame
 local editCardFrameName = "EditCardFrame"
 local editCardFrameTitle = "Edit Card"
 local idOfCardBeingEdited = 0
@@ -71,37 +219,52 @@ local cardQuestionTextBoxGreyHintText = "Enter question..."
 local cardAnswerTextBoxGreyHintText = "Enter answer..."
 
 -- Flashcard frame
+local flashcardFrame
 local flashcardFrameName = "FlashcardFrame"
 local flashcardFrameTitlePrefix = "Deck: " -- Title changes to display deck name when you navigate to this frame
 
 -- Deck settings frame
+local deckSettingsFrame
 local deckSettingsFrameName = "DeckSettingsFrame"
 local deckSettingsFrameTitlePrefix = "Deck Settings - "
 
+
 -- FUNCTIONS
+--------------------------------------------------------------------------------------------------------------------------------
+
+-- Get frame by name
+local function getFrame(frameName)
+	return ProductiveWoWAllFrames[frameName]
+end
+
+-- Reposition next frame to position of previous frame, then show it (used for navigating between frames)
+local function repositionAndShowFrame(frame)
+	frame:ClearAllPoints()
+	frame:SetPoint(menuCurrentAnchorPoint, menuCurrentAnchorRelativeTo, menuCurrentRelativePoint, menuCurrentXOffsetFromCenter, menuCurrentYOffsetFromCenter)
+	frame:Show()
+end
 
 -- Function to create a new frame, wraps WoW's CreateFrame() in order to trigger additional functionality such as adding the frame to the list of all frames
-local function createFrame(frame_name, parent_frame, frame_title, frame_width, frame_height)
-	local newFrame = CreateFrame("Frame", frame_name, parent_frame, "BasicFrameTemplateWithInset")
-	ProductiveWoW_allFrames[frame_name] = newFrame
-	
+local function createFrame(frameName, parentFrame, frameTitle, frameWidth, frameHeight)
+	local newFrame = CreateFrame(FRAME, frameName, parentFrame, BASIC_FRAME_TEMPLATE_WITH_INSET)
+	ProductiveWoWAllFrames[frameName] = newFrame
 	-- Default size if no width/height is specified
-	frame_width = frame_width or basicFrameWidth
-	frame_height = frame_height or basicFrameHeight
-	newFrame:SetSize(frame_width, frame_height)
-	newFrame:SetPoint("CENTER", parent_frame, "CENTER", menuCurrentXOffsetFromCenter, menuCurrentYOffsetFromCenter)
+	frameWidth = frameWidth or basicFrameWidth
+	frameHeight = frameHeight or basicFrameHeight
+	newFrame:SetSize(frameWidth, frameHeight)
+	newFrame:SetPoint(CENTER, parentFrame, CENTER, menuCurrentXOffsetFromCenter, menuCurrentYOffsetFromCenter)
 	newFrame.TitleBg:SetHeight(basicFrameTitleBackgroundHeight)
-	newFrame.title = newFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	newFrame.title:SetPoint("TOPLEFT", newFrame.TitleBg, "TOPLEFT", basicFrameTitleOffsetXFromTopLeft, basicFrameTitleOffsetYFromTopLeft)
-	newFrame.title:SetText(frame_title)
+	newFrame.title = newFrame:CreateFontString(nil, OVERLAY, GAME_FONT_NORMAL)
+	newFrame.title:SetPoint(TOPLEFT, newFrame.TitleBg, TOPLEFT, basicFrameTitleOffsetXFromTopLeft, basicFrameTitleOffsetYFromTopLeft)
+	newFrame.title:SetText(frameTitle)
 	newFrame:EnableMouse(true)
 	newFrame:SetMovable(true)
 	newFrame:SetDontSavePosition(true) -- Disable position tracking by Blizzard's UI manager because we're tracking it using menuCurrentXOffsetFromCenter and menuCurrentYOffsetFromCenter
-	newFrame:RegisterForDrag("LeftButton")
-	newFrame:SetScript("OnDragStart", function(self)
+	newFrame:RegisterForDrag(MOUSE_LEFT)
+	newFrame:SetScript(ON_MOUSE_DRAG_START, function(self)
 		self:StartMoving()
 	end)
-	newFrame:SetScript("OnDragStop", function(self)
+	newFrame:SetScript(ON_MOUSE_DRAG_STOP, function(self)
 		self:StopMovingOrSizing()
 		local point, relativeTo, relativePoint, x, y = newFrame:GetPoint()
 		menuCurrentAnchorPoint = point
@@ -110,88 +273,91 @@ local function createFrame(frame_name, parent_frame, frame_title, frame_width, f
 		menuCurrentXOffsetFromCenter = x
 		menuCurrentYOffsetFromCenter = y
 	end)
-	table.insert(UISpecialFrames, frame_name) -- This makes the frame closeable by pressing the Escape key
-
+	table.insert(UISpecialFrames, frameName) -- This makes the frame closeable by pressing the Escape key
 	return newFrame
 end
 
 -- Create a basic button
-local function createButton(button_name, parent_frame, button_text, anchor_point, x_offset, y_offset, on_click_function)
-	local newButton = CreateFrame("Button", button_name, parent_frame, "UIPanelButtonTemplate")
+local function createButton(buttonName, parentFrame, buttonText, anchorPoint, xOffset, yOffset, onClickFunction)
+	local newButton = CreateFrame(BUTTON, buttonName, parentFrame, UI_PANEL_BUTTON_TEMPLATE)
+	local relativeToAnchorPoint = anchorPoint
 	newButton:SetSize(basicButtonWidth, basicButtonHeight)
-	newButton:SetPoint(anchor_point, parent_frame, anchor_point, x_offset, y_offset)
-	newButton:SetText(button_text)
-	newButton:SetScript("OnClick", function(...)
-		if on_click_function ~= nil then
-			on_click_function(...)
+	newButton:SetPoint(anchorPoint, parentFrame, relativeToAnchorPoint, xOffset, yOffset)
+	newButton:SetText(buttonText)
+	newButton:SetScript(ON_CLICK, function(...)
+		if onClickFunction ~= nil then
+			onClickFunction(...)
 		end
 	end)
-
 	return newButton
 end
 
 -- Create a basic navigation button
-local function createNavigationButton(button_name, parent_frame, button_text, anchor_point, x_offset, y_offset, frame_to_navigate_to, sound, on_click_function)
-	local newButton = CreateFrame("Button", button_name, parent_frame, "UIPanelButtonTemplate")
+local function createNavigationButton(buttonName, parentFrame, buttonText, anchorPoint, xOffset, yOffset, frameToNavigateTo, sound, onClickFunction, navigationConditionsFunction, onNavigationFunction)
+	local newButton = CreateFrame(BUTTON, buttonName, parentFrame, UI_PANEL_BUTTON_TEMPLATE)
+	local relativeToAnchorPoint = anchorPoint
+	sound = sound or SOUNDKIT.IG_CHARACTER_INFO_OPEN
 	newButton:SetSize(basicButtonWidth, basicButtonHeight)
-	newButton:SetPoint(anchor_point, parent_frame, anchor_point, x_offset, y_offset)
-	newButton:SetText(button_text)
-	newButton:SetScript("OnClick", function(self)
-		local navigationConditionsPassed = true -- some on_click_functions may return a Boolean value on whether certain conditions were met to trigger navigation to the next screen
-		if on_click_function ~= nil then
-			navigationConditionsPassed = on_click_function()
+	newButton:SetPoint(anchorPoint, parentFrame, relativeToAnchorPoint, xOffset, yOffset)
+	newButton:SetText(buttonText)
+	newButton:SetScript(ON_CLICK, function(self)
+		if onClickFunction ~= nil then
+			onClickFunction() -- Run OnClick function regardless of navigation conditions passing or failing
 		end
-		if navigationConditionsPassed ~= nil and navigationConditionsPassed == false then
+		local navigationConditionsPassed = true
+		if navigationConditionsFunction ~= nil then
+			navigationConditionsPassed = navigationConditionsFunction() -- Check if conditions passed to navigate to next frame
+		end
+		if navigationConditionsPassed == false then
+			-- Navigation conditions failed
 			return
 		else
-			parent_frame:Hide()
-			frame_to_navigate_to:ClearAllPoints() -- Frames can have up to 5 anchor points, remove them to prevent errors as we reset its position
-			frame_to_navigate_to:SetPoint(menuCurrentAnchorPoint, menuCurrentAnchorRelativeTo, menuCurrentRelativePoint, menuCurrentXOffsetFromCenter, menuCurrentYOffsetFromCenter) -- Move the frame to where previous frame was in case user dragged it so that it doesn't appear in a different position when the button is pressed
-			frame_to_navigate_to:Show()
-			if sound == nil or sound == "" then
-				PlaySound(SOUNDKIT.IG_CHARACTER_INFO_OPEN)
-			else
-				PlaySound(sound)
+			-- Navigation conditions passed
+			if onNavigationFunction	~= nil then
+					onNavigationFunction()
 			end
+			parentFrame:Hide()
+			repositionAndShowFrame(frameToNavigateTo)
+			PlaySound(sound)
 		end
 	end)
-
 	return newButton
 end	
 
 -- Create a basic text box
-local function createTextBox(textbox_name, parent_frame, width, height, anchor_point, x_offset, y_offset, grey_hint_text)
-	local newTextBox = CreateFrame("EditBox", textbox_name, parent_frame, "InputBoxTemplate")
-	if grey_hint_text == nil then
-		grey_hint_text = ""
+local function createTextBox(textboxName, parentFrame, width, height, anchorPoint, xOffset, yOffset, greyHintText)
+	local newTextBox = CreateFrame(EDITBOX, textboxName, parentFrame, INPUT_BOX_TEMPLATE)
+	local relativeToAnchorPoint = anchorPoint
+	if greyHintText == nil then
+		greyHintText = ""
 	end
-	newTextBox.greyHintText = grey_hint_text
+	newTextBox.greyHintText = greyHintText
 	newTextBox:SetSize(width, height)
-	newTextBox:SetPoint(anchor_point, parent_frame, anchor_point, x_offset, y_offset)
+	newTextBox:SetPoint(anchorPoint, parentFrame, relativeToAnchorPoint, xOffset, yOffset)
 	newTextBox:SetAutoFocus(false)
-	newTextBox:SetText(grey_hint_text)
-	newTextBox:SetTextColor(0.5, 0.5, 0.5)
+	newTextBox:SetText(greyHintText)
+	newTextBox:SetTextColor(unpack(GREY))
 	newTextBox:SetCursorPosition(0)
 	newTextBox.hasFocus = false
-	newTextBox:SetScript("OnEditFocusGained", function(self)
+	newTextBox:SetScript(ON_EDIT_FOCUS_GAINED, function(self)
 		self.hasFocus = true
-		if self:GetText() == grey_hint_text then
+		if self:GetText() == greyHintText then
 			self:SetText("")
-			self:SetTextColor(1, 1, 1)
+			self:SetTextColor(unpack(WHITE))
 		end
 	end)
-	newTextBox:SetScript("OnEditFocusLost", function(self)
+	newTextBox:SetScript(ON_EDIT_FOCUS_LOST, function(self)
 		self.hasFocus = false
 		if self:GetText() == "" then
-			self:SetText(grey_hint_text)
-			self:SetTextColor(0.5, 0.5, 0.5)
+			self:SetText(greyHintText)
+			self:SetTextColor(unpack(GREY))
 		end
 	end)
-	newTextBox:SetScript("OnEnterPressed", function(self)
+	newTextBox:SetScript(ON_ENTER_PRESSED, function(self)
 		self:ClearFocus()
 		newTextBox.hasFocus = false
 	end)
-	parent_frame:SetScript("OnMouseDown", function(self)
+	parentFrame:SetScript(ON_MOUSE_DOWN, function(self)
 		if newTextBox.hasFocus then
 			newTextBox:ClearFocus()
 			newTextBox.hasFocus = false
@@ -202,43 +368,31 @@ local function createTextBox(textbox_name, parent_frame, width, height, anchor_p
 end
 
 -- Create basic text
-local function createText(anchor, parent, parentAnchor, x_offset, y_offset, text)
-	local textObject = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	textObject:SetPoint(anchor, parent, parentAnchor, x_offset, y_offset)
+local function createText(anchor, parent, parentAnchor, xOffset, yOffset, text)
+	local textObject = parent:CreateFontString(nil, OVERLAY, GAME_FONT_HIGHLIGHT)
+	textObject:SetPoint(anchor, parent, parentAnchor, xOffset, yOffset)
 	textObject:SetText(text)
-	textObject:SetJustifyH("LEFT")
+	textObject:SetJustifyH(JUSTIFY_LEFT)
 	textObject:SetNonSpaceWrap(false)
 	textObject:SetWordWrap(false)
 	return textObject
 end
 
--- Get frame by name
-local function getFrame(frameName)
-	return ProductiveWoW_allFrames[frameName]
-end
-
 -- Clear textbox to show hint text
 local function clearTextBox(textbox)
 	textbox:SetText(textbox.greyHintText)
-	textbox:SetTextColor(0.5, 0.5, 0.5)
+	textbox:SetTextColor(unpack(GREY))
 	if textbox.hasFocus then
-			textbox:ClearFocus()
-			textbox.hasFocus = false
+		textbox:ClearFocus()
+		textbox.hasFocus = false
 	end
 end
 
 -- Hide all frames
 function ProductiveWoW_hideAllFrames()
-	for key, frame in pairs(ProductiveWoW_allFrames) do
+	for key, frame in pairs(ProductiveWoWAllFrames) do
 		frame:Hide()
 	end
-end
-
--- Reposition next frame to position of previous frame, then show it (used for navigating between frames)
-local function repositionAndShowFrame(frame)
-	frame:ClearAllPoints()
-	frame:SetPoint(menuCurrentAnchorPoint, menuCurrentAnchorRelativeTo, menuCurrentRelativePoint, menuCurrentXOffsetFromCenter, menuCurrentYOffsetFromCenter)
-	frame:Show()
 end
 
 -- Show main menu
@@ -250,7 +404,7 @@ end
 
 -- Are any frames shown?
 function ProductiveWoW_anyFrameIsShown()
-	for key, frame in pairs(ProductiveWoW_allFrames) do
+	for key, frame in pairs(ProductiveWoWAllFrames) do
 		if frame:IsShown() then
 			return true
 		end
@@ -260,7 +414,7 @@ end
 
 -- Get current frame shown
 function ProductiveWoW_getCurrentlyShownFrame()
-	for key, frame in pairs(ProductiveWoW_allFrames) do
+	for key, frame in pairs(ProductiveWoWAllFrames) do
 		if frame:IsShown() then
 			return frame
 		end
@@ -268,161 +422,179 @@ function ProductiveWoW_getCurrentlyShownFrame()
 	return nil
 end
 
+-- Create all the base frames of the addon
+local function createAllBaseFrames()
+	mainMenu = createFrame(mainMenuFrameName, UIParent, mainMenuFrameTitle)
+	createDeckFrame = createFrame(createDeckFrameName, UIParent, createDeckFrameTitle)
+	deleteDeckFrame = createFrame(deleteDeckFrameName, UIParent, deleteDeckFrameTitle)
+	modifyDeckFrame = createFrame(modifyDeckFrameName, UIParent, "", modifyDeckFrameWidth, modifyDeckFrameHeight)
+	addCardFrame = createFrame(addCardFrameName, UIParent, addCardFrameTitle)
+	editCardFrame = createFrame(editCardFrameName, UIParent, editCardFrameTitle)
+	flashcardFrame = createFrame(flashcardFrameName, UIParent)
+	multipleCardsDeletionConfirmationFrame = createFrame(multipleCardsDeletionConfirmationFrameName, UIParent, multipleCardsDeletionConfirmationFrameTitle)
+	deckSettingsFrame = createFrame(deckSettingsFrameName, UIParent, "")
+end
 
--- Required to run in this block to ensure that saved variables are loaded before this code runs
-EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
-
-	-- FRAME INITIALIZATION --
-	-- Create all the frames
-	local mainmenu = createFrame(mainMenuFrameName, UIParent, mainMenuFrameTitle)
-	local createDeckFrame = createFrame(createDeckFrameName, UIParent, createDeckFrameTitle)
-	local deleteDeckFrame = createFrame(deleteDeckFrameName, UIParent, deleteDeckFrameTitle)
-	local modifyDeckFrame = createFrame(modifyDeckFrameName, UIParent, "", modifyDeckFrameWidth, modifyDeckFrameHeight)
-	local addCardFrame = createFrame(addCardFrameName, UIParent, addCardFrameTitle)
-	local editCardFrame = createFrame(editCardFrameName, UIParent, editCardFrameTitle)
-	local flashcardFrame = createFrame(flashcardFrameName, UIParent)
-	local multipleCardsDeletionConfirmationFrame = createFrame(multipleCardsDeletionConfirmationFrameName, UIParent, multipleCardsDeletionConfirmationFrameTitle)
-	local deckSettingsFrame = createFrame(deckSettingsFrameName, UIParent, "")
-
-	-- MAIN MENU FRAME
+-- Configure the main menu frame
+local function configureMainMenuFrame()
 	-- Choose deck text
-	mainmenu.chooseDeckText = createText("TOPLEFT", mainmenu, "TOPLEFT", 15, -42, "Choose deck:")
+	mainMenu.chooseDeckText = createText(mainMenuChooseDeckTextAnchor, mainMenu, mainMenuChooseDeckTextParentAnchor, mainMenuChooseDeckTextXOffset, mainMenuChooseDeckTextYOffset, mainMenuChooseDeckTextValue)
 
 	-- Choose deck dropdown
 	-- Generator function generates the content of the dropdown
-	local function chooseDeckDropdownGeneratorFunction(owner, rootDescription)
-		owner:SetDefaultText(ProductiveWoWSavedSettings["currently_selected_deck"]) -- Reset to blank if selected deck was just deleted
+	function chooseDeckDropdownGeneratorFunction(owner, rootDescription)
+		owner:SetDefaultText(ProductiveWoW_getCurrentDeckName()) -- Reset to blank if selected deck was just deleted
 		-- Grab list of decks from ProductiveWoWData and create a dropdown button for each
 		-- Extract keys (which are the deck names) and sort them alphabetically
-		local deck_names = {}
-		for deck_name in pairs(ProductiveWoWData["decks"]) do
-			table.insert(deck_names, deck_name)
-		end
-		table.sort(deck_names)
+		local deckNames = ProductiveWoW_getKeys(ProductiveWoW_getAllDecks())
+		table.sort(deckNames)
 		-- Create dropdown buttons for each deck
-		for i, deck_name in ipairs(deck_names) do
-			rootDescription:CreateButton(deck_name, function(data) 
+		for i, deckName in ipairs(deckNames) do
+			rootDescription:CreateButton(deckName, function(data)
 				-- Function that determines what happens when you click on a deck in the dropdown
-				ProductiveWoWSavedSettings["currently_selected_deck"] = deck_name
-				mainmenu.chooseDeckDropdown:SetDefaultText(deck_name)
+				ProductiveWoW_setCurrentlySelectedDeck(deckName)
+				mainMenu.chooseDeckDropdown:SetDefaultText(deckName)
 			end)
 		end
 	end
-	mainmenu.chooseDeckDropdown = CreateFrame("DropdownButton", nil, mainmenu, "WowStyle1DropdownTemplate")
-	mainmenu.chooseDeckDropdown:SetSize(100, 25)
-	mainmenu.chooseDeckDropdown:SetPoint("TOPLEFT", mainmenu, "TOPLEFT", 100, -35)
-	mainmenu.chooseDeckDropdown:SetupMenu(chooseDeckDropdownGeneratorFunction)
-	mainmenu.chooseDeckDropdown:SetDefaultText(ProductiveWoWSavedSettings["currently_selected_deck"])
-	mainmenu.chooseDeckDropdown:SetScript("OnShow", function(self)
-		mainmenu.chooseDeckDropdown:GenerateMenu()
+	mainMenu.chooseDeckDropdown = CreateFrame(DROPDOWN_BUTTON, mainMenuChooseDeckDropdownName, mainMenu, WOW_STYLE_1_DROPDOWN_TEMPLATE)
+	mainMenu.chooseDeckDropdown:SetSize(mainMenuChooseDeckDropdownWidth, mainMenuChooseDeckDropdownHeight)
+	mainMenu.chooseDeckDropdown:SetPoint(mainMenuChooseDeckDropdownAnchor, mainMenu, mainMenuChooseDeckDropdownParentAnchor, mainMenuChooseDeckDropdownXOffset, mainMenuChooseDeckDropdownYOffset)
+	mainMenu.chooseDeckDropdown:SetupMenu(chooseDeckDropdownGeneratorFunction)
+	mainMenu.chooseDeckDropdown:SetDefaultText(ProductiveWoW_getCurrentDeckName())
+	mainMenu.chooseDeckDropdown:SetScript(ON_SHOW, function()
+		mainMenu.chooseDeckDropdown:GenerateMenu()
 	end)
 
 	-- Create new deck button that takes you to create deck frame
-	mainmenu.navigateToCreateDeckButton = createNavigationButton("NavigateToCreateDeckButton", mainmenu, "Create Deck", "TOPLEFT", 15, -62, createDeckFrame)
+	mainMenu.navigateToCreateDeckButton = createNavigationButton(mainMenuNavigateToCreateDeckButtonName, mainMenu, mainMenuNavigateToCreateDeckButtonText, mainMenuNavigateToCreateDeckButtonAnchor, mainMenuNavigateToCreateDeckButtonXOffset, mainMenuNavigateToCreateDeckButtonYOffset, createDeckFrame)
 
 	-- Create delete deck button that takes you to delete deck frame
-	mainmenu.navigateToDeleteDeckButton = createNavigationButton("NavigateToDeleteDeckButton", mainmenu, "Delete Deck", "TOPLEFT", 15, -92, deleteDeckFrame)
+	mainMenu.navigateToDeleteDeckButton = createNavigationButton(mainMenuNavigateToDeleteDeckButtonName, mainMenu, mainMenuNavigateToDeleteDeckButtonText, mainMenuNavigateToDeleteDeckButtonAnchor, mainMenuNavigateToDeleteDeckButtonXOffset, mainMenuNavigateToDeleteDeckButtonYOffset, deleteDeckFrame)
 
 	-- Create modify deck button that takes you to the modify deck frame
-	local function navigateToModifyDeckButtonOnClick()
-		local currentDeck = ProductiveWoWSavedSettings["currently_selected_deck"]
-		if currentDeck ~= nil then
-			-- Set title of Modify Deck frame
-			modifyDeckFrame.title:SetText(modifyDeckFrameTitlePrefix .. currentDeck)
-			return true -- Conditions for navigation passed
+	local function navigateToModifyDeckButtonNavigationConditions()
+		local currentDeckName = ProductiveWoW_getCurrentDeckName()
+		if currentDeckName ~= nil then
+			return true
 		else
-			print("No deck is currently selected.")
+			print(navigateToModifyDeckButtonNoDeckSelectedMessage)
 			return false
 		end
 	end
-	mainmenu.navigateToModifyDeckButton = createNavigationButton("NavigateToModifyDeckButton", mainmenu, "Modify Deck", "TOPLEFT", 230, -32, modifyDeckFrame, nil, navigateToModifyDeckButtonOnClick)
+
+	-- Function that runs when navigateToModifyDeckButtonNavigationConditions() returns true and you switch to the modify deck frame
+	local function navigateToModifyDeckButtonOnNavigation()
+		-- Set title of Modify Deck frame
+		modifyDeckFrame.title:SetText(modifyDeckFrameTitlePrefix .. ProductiveWoW_getCurrentDeckName())
+	end
+	-- Button to navigate to the modify deck frame assuming conditions are met
+	mainMenu.navigateToModifyDeckButton = createNavigationButton(mainMenuNavigateToModifyDeckButtonName, mainMenu, mainMenuNavigateToModifyDeckButtonText, mainMenuNavigateToModifyDeckButtonAnchor, mainMenuNavigateToModifyDeckButtonXOffset, mainMenuNavigateToModifyDeckButtonYOffset, modifyDeckFrame, nil, nil, navigateToModifyDeckButtonNavigationConditions, navigateToModifyDeckButtonOnNavigation)
 
 	-- Create button to begin flashcard quiz
-	local function navigateToFlashcardFrameButtonOnClick()
-		local currentDeckName = ProductiveWoW_getCurrentDeckName() 
+	local function navigateToFlashcardFrameButtonNavigationConditions()
+		local currentDeckName = ProductiveWoW_getCurrentDeckName()
 		if currentDeckName ~= nil then
 			if ProductiveWoW_tableLength(ProductiveWoW_getDeckCards(currentDeckName)) ~= 0 then
 				if not ProductiveWoW_isDeckCompletedForToday(currentDeckName) then
-					flashcardFrame.title:SetText(flashcardFrameTitlePrefix .. currentDeckName)
-					flashcardFrame.easyDifficultyButton:Hide()
-					flashcardFrame.mediumDifficultyButton:Hide()
-					flashcardFrame.hardDifficultyButton:Hide()
-					flashcardFrame.showAnswerButton:Show()
-					return true -- Conditions for navigation passed
+					return true
 				else
-					print("You've already completed this deck today. If you would like to play it again, go to Modify Deck > Deck Settings > Change the value of Max Daily Cards.")
+					print(mainMenuNavigateToFlashcardFrameButtonAlreadyCompletedDeckTodayMessage)
 					return false
 				end
 			else
-				print("There are no cards in the selected deck.")
+				print(mainMenuNavigateToFlashcardFrameButtonNoCardsInDeckMessage)
 				return false
 			end
 		else
-			print("No deck is currently selected.")
+			print(mainMenuNavigateToFlashcardFrameButtonNoSelectedDeckMessage)
 			return false
 		end
 	end
-	mainmenu.navigateToFlashcardFrameButton = createNavigationButton("NavigateToFlashcardFrameButton", mainmenu, "Go", "TOPLEFT", 230, -92, flashcardFrame, nil, navigateToFlashcardFrameButtonOnClick)
+	local function navigateToFlashcardFrameButtonOnNavigation()
+		flashcardFrame.title:SetText(flashcardFrameTitlePrefix .. ProductiveWoW_getCurrentDeckName())
+		flashcardFrame.easyDifficultyButton:Hide()
+		flashcardFrame.mediumDifficultyButton:Hide()
+		flashcardFrame.hardDifficultyButton:Hide()
+		flashcardFrame.showAnswerButton:Show()
+	end
+	mainMenu.navigateToFlashcardFrameButton = createNavigationButton(mainMenuNavigateToFlashcardFrameButtonName, mainMenu, mainMenuNavigateToFlashcardFrameButtonText, mainMenuNavigateToFlashcardFrameButtonAnchor, mainMenuNavigateToFlashcardFrameButtonXOffset, mainMenuNavigateToFlashcardFrameButtonYOffset, flashcardFrame, nil, nil, navigateToFlashcardFrameButtonNavigationConditions, navigateToFlashcardFrameButtonOnNavigation)
+end
 
-	-- CREATE DECK FRAME
+-- Configure create deck frame
+local function configureCreateDeckFrame()
 	-- Deck name textbox
-	local deckNameTextBoxGreyHintText = "Deck name..."
-	createDeckFrame.deckNameTextBox = createTextBox("CreateDeckNameTextBox", createDeckFrame, 200, 25, "CENTER", 0, 0, deckNameTextBoxGreyHintText)
+	createDeckFrame.deckNameTextBox = createTextBox(createDeckFrameDeckNameTextBoxName, createDeckFrame, createDeckFrameDeckNameTextBoxWidth, createDeckFrameDeckNameTextBoxHeight, createDeckFrameDeckNameTextBoxAnchor, createDeckFrameDeckNameTextBoxXOffset, createDeckFrameDeckNameTextBoxYOffset, createDeckFrameDeckNameTextBoxGreyHintText)
 
 	-- Create deck button
 	local function createDeckButtonOnClick()
-		local deck_name = createDeckFrame.deckNameTextBox:GetText()
-		if ProductiveWoWData["decks"][deck_name] == nil then
-			if not ProductiveWoW_stringContainsOnlyWhitespace(deck_name) and deck_name ~= deckNameTextBoxGreyHintText then
-				ProductiveWoW_addDeck(deck_name)
+		local deckName = createDeckFrame.deckNameTextBox:GetText()
+		if not ProductiveWoW_deckExists(deckName) then
+			if not ProductiveWoW_stringContainsOnlyWhitespace(deckName) and deckName ~= createDeckFrameDeckNameTextBoxGreyHintText then
+				ProductiveWoW_addDeck(deckName)
 			else
-				print("Deck name was blank so no deck was created.")
+				print(createDeckFrameCreateDeckButtonBlankNameMessage)
 			end
 		else
-			print("A deck by that name already exists.")
+			print(createDeckFrameCreateDeckButtonDeckAlreadyExistsMessage)
 		end	
-		createDeckFrame.deckNameTextBox:SetText(deckNameTextBoxGreyHintText)
-		createDeckFrame.deckNameTextBox:SetTextColor(0.5, 0.5, 0.5)
+		clearTextBox(createDeckFrame.deckNameTextBox)
 	end
-	createDeckFrame.createDeckButton = createNavigationButton("CreateDeckAndNavigateToMainMenuButton", createDeckFrame, "Create", "CENTER", 0, -40, mainmenu, SOUNDKIT.IG_CHARACTER_INFO_CLOSE, createDeckButtonOnClick)
+	createDeckFrame.createDeckButton = createNavigationButton(createDeckFrameCreateDeckButtonName, createDeckFrame, createDeckFrameCreateDeckButtonText, createDeckFrameCreateDeckButtonAnchor, createDeckFrameCreateDeckButtonXOffset, createDeckFrameCreateDeckButtonYOffset, mainMenu, createDeckFrameCreateDeckButtonSound, createDeckButtonOnClick)
+end
 
-
-	-- CREATE DECK FRAME
+local function configureDeleteDeckFrame()
 	-- Delete deck by name textbox
-	local deleteDeckNameTextBoxGreyHintText = "Enter deck name to delete..."
-	deleteDeckFrame.deleteDeckNameTextBox = createTextBox("DeleteDeckNameTextBox", deleteDeckFrame, 200, 25, "CENTER", 0, 0, deleteDeckNameTextBoxGreyHintText)
+	deleteDeckFrame.deleteDeckNameTextBox = createTextBox(deleteDeckFrameDeckNameTextBoxName, deleteDeckFrame, deleteDeckFrameDeckNameTextBoxWidth, deleteDeckFrameDeckNameTextBoxHeight, deleteDeckFrameDeckNameTextBoxAnchor, deleteDeckFrameDeckNameTextBoxXOffset, deleteDeckFrameDeckNameTextBoxYOffset, deleteDeckFrameDeckNameTextBoxGreyHintText)
 
 	-- Delete deck button
 	local function deleteDeckButtonOnClick()
-		local deck_name = deleteDeckFrame.deleteDeckNameTextBox:GetText()
-		if ProductiveWoWData["decks"][deck_name] ~= nil and deck_name ~= deleteDeckNameTextBoxGreyHintText then
-			if ProductiveWoW_tableLength(ProductiveWoW_cardsToAdd) ~= 0 then
-				if not ProductiveWoW_inTableKeys(deck_name, ProductiveWoW_cardsToAdd) and not ProductiveWoW_ankiDeckName == deck_name then
-					ProductiveWoW_deleteDeck(deck_name)
-				else
-					print("Cannot delete this deck because it exists in ProductiveWoWDecks.lua and will just be re-added when the addon is reloaded. Remove it from that file first, reload the game by typing /reload, then come back here to delete it.")
-				end
+		local deckName = deleteDeckFrame.deleteDeckNameTextBox:GetText()
+		if ProductiveWoW_deckExists(deckName) and deckName ~= deleteDeckFrameDeckNameTextBoxGreyHintText then
+			if not ProductiveWoW_deckExistsInBulkImportFile(deckName) then
+				ProductiveWoW_deleteDeck(deckName)
 			else
-				ProductiveWoW_deleteDeck(deck_name)
+				print(deleteDeckFrameDeleteDeckButtonDeckExistsInBulkImportFileMessage)
 			end
 		else
-			print("A deck by that name does not exist.")
+			print(deleteDeckFrameDeleteDeckButtonDeckDoesNotExistMessage)
 		end
-		deleteDeckFrame.deleteDeckNameTextBox:SetText(deleteDeckNameTextBoxGreyHintText)
-		deleteDeckFrame.deleteDeckNameTextBox:SetTextColor(0.5, 0.5, 0.5)
+		clearTextBox(deleteDeckFrame.deleteDeckNameTextBox)
 	end
-	deleteDeckFrame.deleteDeckButton = createNavigationButton("DeleteDeckAndNavigateToMainMenuButton", deleteDeckFrame, "Delete", "CENTER", 0, -40, mainmenu, SOUNDKIT.IG_CHARACTER_INFO_CLOSE, deleteDeckButtonOnClick)
+	deleteDeckFrame.deleteDeckButton = createNavigationButton(deleteDeckFrameDeleteDeckButtonName, deleteDeckFrame, deleteDeckFrameDeleteDeckButtonText, deleteDeckFrameDeleteDeckButtonAnchor, deleteDeckFrameDeleteDeckButtonXOffset, deleteDeckFrameDeleteDeckButtonYOffset, mainMenu, deleteDeckFrameDeleteDeckButtonSound, deleteDeckButtonOnClick)
+end
 
-
-	-- MODIFY DECK FRAME
+local function configureModifyDeckFrame()
 	-- "Card List: " Text
-	modifyDeckFrame.cardListText = createText("TOPLEFT", modifyDeckFrame, "TOPLEFT", 15, -42, "Card List:")
+	modifyDeckFrame.cardListText = createText(modifyDeckFrameCardListTextAnchor, modifyDeckFrame, modifyDeckFrameCardListTextParentAnchor, modifyDeckFrameCardListTextXOffset, modifyDeckFrameCardListTextYOffset, modifyDeckFrameCardListTextValue)
 
 	-- Navigate to Add Card Button
-	modifyDeckFrame.navigateToAddCardButton = createNavigationButton("NavigateToAddCardButton", modifyDeckFrame, "Add Card", "TOPRIGHT", -20, -35, addCardFrame)
+	modifyDeckFrame.navigateToAddCardButton = createNavigationButton(modifyDeckFrameNavigateToAddCardButtonName, modifyDeckFrame, modifyDeckFrameNavigateToAddCardButtonText, modifyDeckFrameNavigateToAddCardButtonAnchor, modifyDeckFrameNavigateToAddCardButtonXOffset, modifyDeckFrameNavigateToAddCardButtonYOffset, addCardFrame)
 
 	-- Navigate back to main menu button
-	modifyDeckFrame.navigateBackToMainMenuButton = createNavigationButton("NavigateBackToMainMenuButtonFromModifyDeckFrame", modifyDeckFrame, "Back", "BOTTOMRIGHT", -20, 20, mainmenu, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
+	modifyDeckFrame.navigateBackToMainMenuButton = createNavigationButton(modifyDeckFrameNavigateToMainMenuButtonName, modifyDeckFrame, modifyDeckFrameNavigateToMainMenuButtonText, modifyDeckFrameNavigateToMainMenuButtonAnchor, modifyDeckFrameNavigateToMainMenuButtonXOffset, modifyDeckFrameNavigateToMainMenuButtonYOffset, mainMenu, modifyDeckFrameNavigateToMainMenuButtonSound)
+end
+
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+
+-- Required to run in this block to ensure that saved variables are loaded before this code runs
+EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
+
+	-- FRAME INITIALIZATION --
+	-- Create all the frames
+	createAllBaseFrames()
+
+	-- FRAME CONFIGURATION --
+	configureMainMenuFrame()
+	configureCreateDeckFrame()
+	configureDeleteDeckFrame()
+	configureModifyDeckFrame()
+
+	
+	-- MODIFY DECK FRAME
+	
 
 	-- Navigate to deck settings button
 	local function navigateToDeckSettingsFrameOnClick()
@@ -772,7 +944,7 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 	editCardFrame.navigateBackToModifyDeckFrameButton = createNavigationButton("NavigateBackToModifyDeckFrameButtonFromEditCardFrame", editCardFrame, "Back", "CENTER", 0, -50, modifyDeckFrame, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
 
 	-- Back to main menu button
-	editCardFrame.navigateBackToMainMenuButton = createNavigationButton("NavigateBackToMainMenuButtonFromEditCardFrame", editCardFrame, "Main Menu", "CENTER", 100, -50, mainmenu, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
+	editCardFrame.navigateBackToMainMenuButton = createNavigationButton("NavigateBackToMainMenuButtonFromEditCardFrame", editCardFrame, "Main Menu", "CENTER", 100, -50, mainMenu, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
 
 	-- Populate textboxes with card's question and answer
 	editCardFrame:SetScript("OnShow", function(self) 
@@ -821,7 +993,7 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 	addCardFrame.navigateBackToModifyDeckFrameButton = createNavigationButton("NavigateBackToModifyDeckFrameButton", addCardFrame, "Back", "CENTER", 0, -50, modifyDeckFrame, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
 
 	-- Back to main menu button
-	addCardFrame.navigateBackToMainMenuButton = createNavigationButton("NavigateBackToMainMenuButtonFromAddCardFrame", addCardFrame, "Main Menu", "CENTER", 100, -50, mainmenu, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
+	addCardFrame.navigateBackToMainMenuButton = createNavigationButton("NavigateBackToMainMenuButtonFromAddCardFrame", addCardFrame, "Main Menu", "CENTER", 100, -50, mainMenu, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
 
 
 	-- FLASHCARD FRAME
@@ -903,7 +1075,7 @@ EventUtil.ContinueOnAddOnLoaded("ProductiveWoW", function()
 	flashcardFrame.nextQuestionButton:Hide()
 
 	-- Back to main menu from flashcard frame button
-	flashcardFrame.navigateBackToMainMenuFromFlashcardFrameButton = createNavigationButton("NavigateBackToMainMenuFromFlashcardFrameButton", flashcardFrame, "Main Menu", "BOTTOMRIGHT", -20, 20, mainmenu, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
+	flashcardFrame.navigateBackToMainMenuFromFlashcardFrameButton = createNavigationButton("NavigateBackToMainMenuFromFlashcardFrameButton", flashcardFrame, "Main Menu", "BOTTOMRIGHT", -20, 20, mainMenu, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
 
 	-- OnShow script to refresh question
 	flashcardFrame:SetScript("OnShow", function(self)

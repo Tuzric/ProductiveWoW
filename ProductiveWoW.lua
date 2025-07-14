@@ -1,5 +1,10 @@
 -- v1.2
 
+-- DEV AND DEBUG ONLY --
+local resetSavedVariables = false -- Reset ProductiveWoWData and ProductiveWoWSavedSettings
+local runUnitTests = true
+
+
 -- INITIALIZE VARIABLES --
 -- GLOBALS --
 --------------------------------------------------------------------------------------------------------------------------------
@@ -65,7 +70,7 @@ local dataTableInitialValues = {[DECKS_KEY] = {}}
 
 
 -- LOAD SAVED VARIABLES --
-ProductiveWoWSavedSettings = ProductiveWoWSavedSettings or savedSettingsInitialTable
+ProductiveWoWSavedSettings = ProductiveWoWSavedSettings or savedSettingsTableInitialValues
 ProductiveWoWData = ProductiveWoWData or dataTableInitialValues
 
 
@@ -176,6 +181,11 @@ end
 -- SETTERS --
 --------------------------------------------------------------------------------------------------------------------------------
 
+-- Set the currently selected deck
+function ProductiveWoW_setCurrentlySelectedDeck(deckName)
+	ProductiveWoWSavedSettings[CURRENTLY_SELECTED_DECK_KEY] = deckName
+end
+
 -- Set deck done for today
 function ProductiveWoW_setDeckCompletedForToday(deckName)
 	local deck = ProductiveWoW_getDeck(deckName)
@@ -278,6 +288,22 @@ function ProductiveWoW_deleteDeck(deckName)
 		ProductiveWoWSavedSettings[CURRENTLY_SELECTED_DECK_KEY] = nil
 	end
 	print(deckName .. " has been successfully deleted.")
+end
+
+-- Check if a deck exists
+function ProductiveWoW_deckExists(deckName)
+	if ProductiveWoW_getDeck(deckName) ~= nil then
+		return true
+	end
+	return false
+end
+
+-- Check if a deck exists in ProductiveWoWDecks.lua where decks are bulk imported from
+function ProductiveWoW_deckExistsInBulkImportFile(deckName)
+	if ProductiveWoW_inTableKeys(deckName, ProductiveWoW_cardsToAdd) or ProductiveWoW_ankiDeckName == deckName then
+		return true
+	end
+	return false
 end
 
 -- Check if a question already exists
@@ -501,9 +527,12 @@ end
 
 -- Required to run in this block to ensure that saved variables are loaded before this code runs
 EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
-	-- DEBUG AND DEV ONLY: Uncomment to reset saved variables on addon load
-	ProductiveWoWSavedSettings = {["currently_selected_deck"] = nil}
-	ProductiveWoWData = {["decks"] = {}}
+
+	-- DEBUG AND DEV ONLY
+	if resetSavedVariables == true then
+		ProductiveWoWSavedSettings = {[CURRENTLY_SELECTED_DECK_KEY] = nil}
+		ProductiveWoWData = {[DECKS_KEY] = {}}
+	end
 
 	-- Import decks from ProductiveWoWDecks.lua
 	ProductiveWoW_importDecks()
@@ -541,3 +570,60 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 	-- Settings.RegisterAddOnCategory(category)
 
 end)
+
+
+-- UNIT TESTS --
+--============================================================================================================================--
+
+
+if runUnitTests == true then
+
+	-- ProductiveWoWUtilities.lua Unit Tests --
+	local function ProductiveWoW_tableIsArray_testValueIsArray()
+		local testTable = {"A", {}, true, 1}
+		local testResult = ProductiveWoW_tableIsArray(testTable) == true
+		print("tableIsArray_testValueIsArray() passed: " .. tostring(testResult))
+	end
+
+	local function ProductiveWoW_tableIsArray_testValueIsNotArray()
+		local testTable = {"A", {}, true, [5] = 2}
+		local testResult = ProductiveWoW_tableIsArray(testTable) == false
+		print("tableIsArray_testValueIsNotArray() passed: " .. tostring(testResult))
+	end
+
+	local function ProductiveWoW_tableLength_returnsZeroOnEmptyTable()
+		local testTable = {}
+		local tableLength = ProductiveWoW_tableLength(testTable)
+		local testResult = tableLength == 0
+		print("tableLength_returnsZeroOnEmptyTable() passed: " .. tostring(testResult))
+	end
+
+	local function ProductiveWoW_tableLength_returnsCorrectCount()
+		local testTable = {1, "A", true, {}}
+		local tableLength = ProductiveWoW_tableLength(testTable)
+		local testResult = tableLength == 4
+		print("tableLength_returnsCorrectCount() passed: " .. tostring(testResult))
+	end
+
+	local function ProductiveWoW_inTableKeys_valueNotInKeys()
+		local testTable = {[1] = 2, ["A"] = "B"}
+		local testValue = "FAIL"
+		local testResult = ProductiveWoW_inTableKeys(testValue, testTable) == false
+		print("inTableKeys_valueNotInKeys() passed: " .. tostring(testResult))
+	end
+
+	local function ProductiveWoW_inTableKeys_stringValueInKeys()
+		local testTable = {[1] = 2, ["A"] = "B"}
+		local testValue = "A"
+		local testResult = ProductiveWoW_inTableKeys(testValue, testTable) == true
+		print("inTableKeys_stringValueInKeys() passed: " .. tostring(testResult))
+	end
+
+	ProductiveWoW_tableIsArray_testValueIsArray()
+	ProductiveWoW_tableIsArray_testValueIsNotArray()
+	ProductiveWoW_tableLength_returnsZeroOnEmptyTable()
+	ProductiveWoW_tableLength_returnsCorrectCount()
+	ProductiveWoW_inTableKeys_valueNotInKeys()
+	ProductiveWoW_inTableKeys_stringValueInKeys()
+
+end
