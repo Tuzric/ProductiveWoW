@@ -2,7 +2,7 @@
 
 -- DEV AND DEBUG ONLY --
 local resetSavedVariables = false -- Reset ProductiveWoWData and ProductiveWoWSavedSettings
-local runUnitTests = true
+local runUnitTests = false
 
 
 -- INITIALIZE VARIABLES --
