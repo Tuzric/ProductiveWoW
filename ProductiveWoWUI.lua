@@ -204,30 +204,30 @@ modifyDeckFrame.currentPageTextParentAnchor = ANCHOR_POINTS.BOTTOM
 modifyDeckFrame.currentPageTextXOffset = 0
 modifyDeckFrame.currentPageTextYOffset = 35
 modifyDeckFrame.currentPageTextValue = "1 of 1"
-
-local listOfCardsFrameRowHeight = 20
-local textMenu -- Reference to right click context menu
-local pages = {}
-local currentPageIndex = 1
-local maximumPages = 1
-local numberOfRowsPerPage = 100
-local rows = {}
-local currentNumberOfRowsOnPage = 0 -- Used to keep track when this reaches 0 when a user deletes enough cards, to auto-switch to the previous page
-local listOfSelectedCardIDs = {}
-local multipleCardsSelected = false
-local editCardButtonOnClick -- Function
-local deleteCardButtonOnClick -- Function
-local unselectAllRows -- Function to unselect all rows
-local selectRow -- Function to select a single row
-local unselectRow -- Function to unselect a single row
-local populateRows -- Function to populate rows of cards for the current page
-local createPages -- Function to create the pages of cards
+-- List of cards
+modifyDeckFrame.listOfCardsFrameRowHeight = 20
+modifyDeckFrame.textMenu = nil -- Reference to right click context menu
+modifyDeckFrame.pages = {}
+modifyDeckFrame.currentPageIndex = 1
+modifyDeckFrame.maximumPages = 1
+modifyDeckFrame.numberOfRowsPerPage = 100
+modifyDeckFrame.rows = {}
+modifyDeckFrame.currentNumberOfRowsOnPage = 0 -- Used to keep track when this reaches 0 when a user deletes enough cards, to auto-switch to the previous page
+modifyDeckFrame.listOfSelectedCardIDs = {}
+modifyDeckFrame.multipleCardsSelected = false
+modifyDeckFrame.editCardButtonOnClick = nil -- Function
+modifyDeckFrame.deleteCardButtonOnClick = nil -- Function
+modifyDeckFrame.unselectAllRows = nil -- Function to unselect all rows
+modifyDeckFrame.selectRow = nil -- Function to select a single row
+modifyDeckFrame.unselectRow = nil -- Function to unselect a single row
+modifyDeckFrame.populateRows = nil -- Function to populate rows of cards for the current page
+modifyDeckFrame.createPages = nil -- Function to create the pages of cards
 
 -- Confirmation box that appears when you attempt to delete multiple selected cards
 local multipleCardsDeletionConfirmationFrame = {}
-local multipleCardsDeletionConfirmationFrameName = "MultipleCardsDeletionConfirmationFrame"
-local multipleCardsDeletionConfirmationFrameTitle = "Confirm Deletion"
-local multipleCardsDeletionConfirmationFrameText = "Are you sure you want to delete all the selected cards?"
+multipleCardsDeletionConfirmationFrame.frameName = "MultipleCardsDeletionConfirmationFrame"
+multipleCardsDeletionConfirmationFrame.frameTitle = "Confirm Deletion"
+multipleCardsDeletionConfirmationFrame.Text = "Are you sure you want to delete all the selected cards?"
 
 -- Add card frame
 local addCardFrame = {}
@@ -456,7 +456,7 @@ local function createAllBaseFrames()
 	addCardFrame.Frame = createFrame(addCardFrameName, UIParent, addCardFrameTitle)
 	editCardFrame.Frame = createFrame(editCardFrameName, UIParent, editCardFrameTitle)
 	flashcardFrame.Frame = createFrame(flashcardFrameName, UIParent)
-	multipleCardsDeletionConfirmationFrame.Frame = createFrame(multipleCardsDeletionConfirmationFrameName, UIParent, multipleCardsDeletionConfirmationFrameTitle)
+	multipleCardsDeletionConfirmationFrame.Frame = createFrame(multipleCardsDeletionConfirmationFrame.frameName, UIParent, multipleCardsDeletionConfirmationFrame.frameTitle)
 	deckSettingsFrame.Frame = createFrame(deckSettingsFrameName, UIParent, "")
 end
 
@@ -634,12 +634,12 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 
 	-- Next page button
 	local function nextPageButtonOnClick()
-		local nextPageIndex = currentPageIndex + 1
-		if nextPageIndex <= maximumPages then
-			currentPageIndex = nextPageIndex
-			createPages()
-			populateRows()
-			modifyDeckFrame.currentPageText:SetText(currentPageIndex .. " of " .. maximumPages)
+		local nextPageIndex = modifyDeckFrame.currentPageIndex + 1
+		if nextPageIndex <= modifyDeckFrame.maximumPages then
+			modifyDeckFrame.currentPageIndex = nextPageIndex
+			modifyDeckFrame.createPages()
+			modifyDeckFrame.populateRows()
+			modifyDeckFrame.currentPageText:SetText(modifyDeckFrame.currentPageIndex .. " of " .. modifyDeckFrame.maximumPages)
 			modifyDeckFrame.listOfCardsFrame:SetVerticalScroll(0)
 		end
 		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
@@ -651,12 +651,12 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 
 	-- Previous page button
 	local function previousPageButtonOnClick()
-		local prevPageIndex = currentPageIndex - 1
+		local prevPageIndex = modifyDeckFrame.currentPageIndex - 1
 		if prevPageIndex >= 1 then
-			currentPageIndex = currentPageIndex - 1
-			createPages()
-			populateRows()
-			modifyDeckFrame.currentPageText:SetText(currentPageIndex .. " of " .. maximumPages)
+			modifyDeckFrame.currentPageIndex = modifyDeckFrame.currentPageIndex - 1
+			modifyDeckFrame.createPages()
+			modifyDeckFrame.populateRows()
+			modifyDeckFrame.currentPageText:SetText(modifyDeckFrame.currentPageIndex .. " of " .. modifyDeckFrame.maximumPages)
 			modifyDeckFrame.listOfCardsFrame:SetVerticalScroll(0)
 		end
 		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
@@ -680,52 +680,52 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 	multipleCardsDeletionConfirmationFrame.Frame:SetWidth(commonFrameAttributes.basicFrameWidth + 40) -- Make it slightly wider to accomodate the text
 
 	-- Confirmation text
-	multipleCardsDeletionConfirmationFrame.confirmationText = createText("CENTER", multipleCardsDeletionConfirmationFrame.Frame, "CENTER", 0, 15, multipleCardsDeletionConfirmationFrameText)
+	multipleCardsDeletionConfirmationFrame.confirmationText = createText("CENTER", multipleCardsDeletionConfirmationFrame.Frame, "CENTER", 0, 15, multipleCardsDeletionConfirmationFrame.Text)
 
 	-- Yes button
 	local function multipleCardsDeletionYesButtonOnClick()
-		for i, card_id in ipairs(listOfSelectedCardIDs) do
-			deleteCardButtonOnClick(card_id)
+		for i, card_id in ipairs(modifyDeckFrame.listOfSelectedCardIDs) do
+			modifyDeckFrame.deleteCardButtonOnClick(card_id)
 		end
-		unselectAllRows()
-		multipleCardsDeletionConfirmationFrame:Hide()
+		modifyDeckFrame.unselectAllRows()
+		multipleCardsDeletionConfirmationFrame.Frame:Hide()
 	end
 	multipleCardsDeletionConfirmationFrame.yesButton = createButton("MultipleDeletionConfirmationYesButton", multipleCardsDeletionConfirmationFrame.Frame, "Yes", "CENTER", -70, -40, multipleCardsDeletionYesButtonOnClick)
 
 	-- Cancel button
 	local function multipleCardsDeletionCancelButtonOnClick()
-		unselectAllRows()
-		multipleCardsDeletionConfirmationFrame:Hide()
+		modifyDeckFrame.unselectAllRows()
+		multipleCardsDeletionConfirmationFrame.Frame:Hide()
 	end
 	multipleCardsDeletionConfirmationFrame.cancelButton = createButton("MultipleDeletionConfirmationCancelButton", multipleCardsDeletionConfirmationFrame.Frame, "Cancel", "CENTER", 70, -40, multipleCardsDeletionCancelButtonOnClick)
 
-	function unselectAllRows()
-		for i, row in ipairs(rows) do
+	function modifyDeckFrame.unselectAllRows()
+		for i, row in ipairs(modifyDeckFrame.rows) do
 			row.selected = false
 			row:SetBackdropColor(0.1, 0.1, 0.1, 0.8)
 		end
-		multipleCardsSelected = false
-		listOfSelectedCardIDs = {}
+		modifyDeckFrame.multipleCardsSelected = false
+		modifyDeckFrame.listOfSelectedCardIDs = {}
 	end
 
-	function selectRow(row_frame)
+	function modifyDeckFrame.selectRow(row_frame)
 		if row_frame.selected == false then
 			row_frame.selected = true
 			row_frame:SetBackdropColor(0.2, 0.2, 0.7, 0.9)
-			table.insert(listOfSelectedCardIDs, row_frame.card_id)
-			if ProductiveWoW_tableLength(listOfSelectedCardIDs) > 1 then
-				multipleCardsSelected = true
+			table.insert(modifyDeckFrame.listOfSelectedCardIDs, row_frame.card_id)
+			if ProductiveWoW_tableLength(modifyDeckFrame.listOfSelectedCardIDs) > 1 then
+				modifyDeckFrame.multipleCardsSelected = true
 			end
 		end
 	end
 
-	function unselectRow(row_frame)
+	function modifyDeckFrame.unselectRow(row_frame)
 		if row_frame.selected == true then
 			row_frame.selected = false
 			row_frame:SetBackdropColor(0.1, 0.1, 0.1, 0.8)
-			ProductiveWoW_removeByValue(row_frame.card_id, listOfSelectedCardIDs)
-			if ProductiveWoW_tableLength(listOfSelectedCardIDs) <= 1 then
-				multipleCardsSelected = false
+			ProductiveWoW_removeByValue(row_frame.card_id, modifyDeckFrame.listOfSelectedCardIDs)
+			if ProductiveWoW_tableLength(modifyDeckFrame.listOfSelectedCardIDs) <= 1 then
+				modifyDeckFrame.multipleCardsSelected = false
 			end
 		end
 	end
@@ -733,8 +733,8 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 	local function createRow(index)
 		local row = CreateFrame("Frame", nil, modifyDeckFrame.listOfCardsFrameContent, "BackdropTemplate")
 		row.selected = false
-		row:SetSize(modifyDeckFrame.Frame:GetWidth() - 45, listOfCardsFrameRowHeight)
-		row:SetPoint("TOPLEFT", 0, -((index - 1) * listOfCardsFrameRowHeight))
+		row:SetSize(modifyDeckFrame.Frame:GetWidth() - 45, modifyDeckFrame.listOfCardsFrameRowHeight)
+		row:SetPoint("TOPLEFT", 0, -((index - 1) * modifyDeckFrame.listOfCardsFrameRowHeight))
 		row:EnableMouse(true)
 		row:SetBackdrop({
 			bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
@@ -761,33 +761,33 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 		row:SetScript("OnMouseUp", function(row_frame, button)
 			if button == "RightButton" then
 				if not row_frame.selected then
-					unselectAllRows()
-					selectRow(row_frame)
+					modifyDeckFrame.unselectAllRows()
+					modifyDeckFrame.selectRow(row_frame)
 				end
-				if not multipleCardsSelected then
+				if not modifyDeckFrame.multipleCardsSelected then
 			    	contextMenu = MenuUtil.CreateContextMenu(row_frame, function(owner, root)
-		      			root:CreateButton("Edit Card", function() editCardButtonOnClick(row_frame.card_id) end)
-		      			root:CreateButton("Delete Card", function() deleteCardButtonOnClick(row_frame.card_id) end)
+		      			root:CreateButton("Edit Card", function() modifyDeckFrame.editCardButtonOnClick(row_frame.card_id) end)
+		      			root:CreateButton("Delete Card", function() modifyDeckFrame.deleteCardButtonOnClick(row_frame.card_id) end)
 		    		end)
 		    		contextMenu:HookScript("OnHide", function()
-		    			unselectRow(row_frame)
+		    			modifyDeckFrame.unselectRow(row_frame)
 		    		end)
 		    	else
 		    		contextMenu = MenuUtil.CreateContextMenu(row_frame, function(owner, root)
 		      			root:CreateButton("Delete All Selected Cards", function() 
-		      				multipleCardsDeletionConfirmationFrame:ClearAllPoints()
-		      				multipleCardsDeletionConfirmationFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-		      				multipleCardsDeletionConfirmationFrame:SetFrameLevel(modifyDeckFrame:GetFrameLevel() + 3)
-		      				multipleCardsDeletionConfirmationFrame:Show() 
+		      				multipleCardsDeletionConfirmationFrame.Frame:ClearAllPoints()
+		      				multipleCardsDeletionConfirmationFrame.Frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+		      				multipleCardsDeletionConfirmationFrame.Frame:SetFrameLevel(modifyDeckFrame.Frame:GetFrameLevel() + 3)
+		      				multipleCardsDeletionConfirmationFrame.Frame:Show() 
 		      			end)
 		      		end)
 		    	end
 	    	elseif button == "LeftButton" then
-	    		if not multipleCardsDeletionConfirmationFrame:IsShown() then
+	    		if not multipleCardsDeletionConfirmationFrame.Frame:IsShown() then
 					if row.selected == true then
-						unselectRow(row_frame)
+						modifyDeckFrame.unselectRow(row_frame)
 					else
-						selectRow(row_frame)
+						modifyDeckFrame.selectRow(row_frame)
 					end
 					PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
 				end
@@ -800,8 +800,8 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 	-- Unselect all rows when user clicks anywhere
 	modifyDeckFrame.Frame:SetScript("OnMouseUp", function(self, button)
 		if button == "LeftButton" then
-			if not multipleCardsDeletionConfirmationFrame:IsShown() then
-				unselectAllRows()
+			if not multipleCardsDeletionConfirmationFrame.Frame:IsShown() then
+				modifyDeckFrame.unselectAllRows()
 			end
 		end
 	end)
@@ -811,44 +811,47 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 	modifyDeckFrame.answerColumnHeader = createText("TOPLEFT", modifyDeckFrame.Frame, "TOPLEFT", 238, -70, "Answer")
 
 	-- Create the pages of cards in case there are so many cards that pages are needed to prevent a performance hit
-	function createPages()
-		pages = {}
+	function modifyDeckFrame.createPages()
+		modifyDeckFrame.pages = {}
 		local cards = ProductiveWoW_getDeckCards(ProductiveWoWSavedSettings["currently_selected_deck"])
 		local cardCounter = 0
 		local currentPage = {}
 		for cardId, card in pairs(cards) do
 			currentPage[cardId] = card
 			cardCounter = cardCounter + 1
-			if cardCounter % numberOfRowsPerPage == 0 then
-				table.insert(pages, ProductiveWoW_tableShallowCopy(currentPage))
+			if cardCounter % modifyDeckFrame.numberOfRowsPerPage == 0 then
+				table.insert(modifyDeckFrame.ages, ProductiveWoW_tableShallowCopy(currentPage))
 				currentPage = {}
 				cardCounter = 0
 			end
 		end
 		-- Add final page since the loop won't add the final page because the modulo condition is not met if the # of rows < numberOfRowsPerPage for the final page
 		if ProductiveWoW_tableLength(currentPage) ~= 0 then
-			table.insert(pages, ProductiveWoW_tableShallowCopy(currentPage))
+			table.insert(modifyDeckFrame.pages, ProductiveWoW_tableShallowCopy(currentPage))
 		end
-		if ProductiveWoW_tableLength(pages) == 0 then
-			pages = {{}}
+		if ProductiveWoW_tableLength(modifyDeckFrame.pages) == 0 then
+			modifyDeckFramepages = {{}}
 		end
-		maximumPages = ProductiveWoW_tableLength(pages)
+		modifyDeckFrame.maximumPages = ProductiveWoW_tableLength(modifyDeckFrame.pages)
+		if modifyDeckFrame.maximumPages == 0 then
+			modifyDeckFrame.maximumPages = 1
+		end
 	end
 	
 	-- Populate rows. This function creates a Frame for each row, since we can't delete frames, everytime it's repopulated when you switch a deck,
 	-- we will need to reuse the existing row Frames just changing their text. New row Frames are only created when we have exhausted 
 	-- all the existing row Frames. If we switch from Deck A which has 5 rows to Deck B which has 3 rows, we need to set the text of the 2 extra rows to blank
-	function populateRows()
-		local cards = pages[currentPageIndex]
+	function modifyDeckFrame.populateRows()
+		local cards = modifyDeckFrame.pages[modifyDeckFrame.currentPageIndex]
 		local table_index = 1 -- Need to increment index manually since card_id may not be continuous due to deletion of cards
-		currentNumberOfRowsOnPage = 0
+		modifyDeckFrame.currentNumberOfRowsOnPage = 0
 		if cards ~= nil then
-			currentNumberOfRowsOnPage = ProductiveWoW_tableLength(cards)
+			modifyDeckFrame.currentNumberOfRowsOnPage = ProductiveWoW_tableLength(cards)
 			for card_id, content in pairs(cards) do
-				local row = rows[table_index]
+				local row = modifyDeckFrame.rows[table_index]
 				if row == nil then -- if this row index does not already exist
 					row = createRow(table_index)
-					rows[table_index] = row
+					modifyDeckFrame.rows[table_index] = row
 				end
 				row.question:SetText(content["question"])
 				row.answer:SetText(content["answer"])
@@ -859,24 +862,24 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 			end
 		end
 		-- Set text to blank for additional rows if current deck has fewer rows than the previously selected deck
-		for i = currentNumberOfRowsOnPage + 1, ProductiveWoW_tableLength(rows) do
-			rows[i].question:SetText("")
-			rows[i].answer:SetText("")
-			rows[i]:Hide()
+		for i = modifyDeckFrame.currentNumberOfRowsOnPage + 1, ProductiveWoW_tableLength(modifyDeckFrame.rows) do
+			modifyDeckFrame.rows[i].question:SetText("")
+			modifyDeckFrame.rows[i].answer:SetText("")
+			modifyDeckFrame.rows[i]:Hide()
 		end
 		-- Resize scroll content
-		modifyDeckFrame.listOfCardsFrameContent:SetHeight(#rows * listOfCardsFrameRowHeight)
+		modifyDeckFrame.listOfCardsFrameContent:SetHeight(#modifyDeckFrame.rows * modifyDeckFrame.listOfCardsFrameRowHeight)
 	end
 	-- Re-populate rows when frame is shown
 	modifyDeckFrame.Frame:SetScript("OnShow", function(self)
 		modifyDeckFrame.listOfCardsFrame:SetVerticalScroll(0)
-		currentPageIndex = 1
-		createPages()
-		populateRows()
-		modifyDeckFrame.currentPageText:SetText(currentPageIndex .. " of " .. maximumPages)
+		modifyDeckFrame.currentPageIndex = 1
+		modifyDeckFrame.createPages()
+		modifyDeckFrame.populateRows()
+		modifyDeckFrame.currentPageText:SetText(modifyDeckFrame.currentPageIndex .. " of " .. modifyDeckFrame.maximumPages)
 	end)
 
-	function editCardButtonOnClick(card_id)
+	function modifyDeckFrame.editCardButtonOnClick(card_id)
 		local deck_name = ProductiveWoWSavedSettings["currently_selected_deck"]
 		local card = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(card_id)
 		if ProductiveWoW_cardsToAdd[deck_name] ~= nil then
@@ -886,14 +889,14 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 			end
 		end
 		idOfCardBeingEdited = card_id
-		modifyDeckFrame:Hide()
-		editCardFrame:ClearAllPoints() -- Frames can have up to 5 anchor points, remove them to prevent errors as we reset its position
-		editCardFrame:SetPoint(commonFrameAttributes.menuCurrentAnchorPoint, commonFrameAttributes.menuCurrentAnchorRelativeTo, commonFrameAttributes.menuCurrentRelativePoint, commonFrameAttributes.menuCurrentXOffsetFromCenter, commonFrameAttributes.menuCurrentYOffsetFromCenter) -- Move the frame to where previous frame was in case user dragged it so that it doesn't appear in a different position when the button is pressed
-		editCardFrame:Show()
+		modifyDeckFrame.Frame:Hide()
+		editCardFrame.Frame:ClearAllPoints() -- Frames can have up to 5 anchor points, remove them to prevent errors as we reset its position
+		editCardFrame.Frame:SetPoint(commonFrameAttributes.menuCurrentAnchorPoint, commonFrameAttributes.menuCurrentAnchorRelativeTo, commonFrameAttributes.menuCurrentRelativePoint, commonFrameAttributes.menuCurrentXOffsetFromCenter, commonFrameAttributes.menuCurrentYOffsetFromCenter) -- Move the frame to where previous frame was in case user dragged it so that it doesn't appear in a different position when the button is pressed
+		editCardFrame.Frame:Show()
 	end
 
 	-- Full definition of this function is here because populateRows needs to be defined 
-	function deleteCardButtonOnClick(card_id)
+	function modifyDeckFrame.deleteCardButtonOnClick(card_id)
 		local card = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(card_id)
 		local current_deck = ProductiveWoWSavedSettings["currently_selected_deck"]
 		if ProductiveWoW_cardsToAdd[current_deck] ~= nil then
@@ -904,14 +907,14 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 		end
 		ProductiveWoW_deleteCardByID(current_deck, card_id)
 		print("Successfully deleted card: " .. card["question"])
-		currentNumberOfRowsOnPage = currentNumberOfRowsOnPage - 1
-		if currentNumberOfRowsOnPage == 0 and ProductiveWoW_tableLength(pages) >= 2 then
+		modifyDeckFrame.currentNumberOfRowsOnPage = modifyDeckFrame.currentNumberOfRowsOnPage - 1
+		if modifyDeckFrame.currentNumberOfRowsOnPage == 0 and ProductiveWoW_tableLength(modifyDeckFrame.pages) >= 2 then
 			-- If 2 or more pages, go to previous page
 			previousPageButtonOnClick()
 		else
-			unselectAllRows()
-			createPages()
-			populateRows()
+			modifyDeckFrame.unselectAllRows()
+			modifyDeckFrame.createPages()
+			modifyDeckFrame.populateRows()
 		end
 	end
 
@@ -948,10 +951,10 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 						card.answer = newAnswer
 						clearTextBox(editCardFrame.cardQuestionTextBox)
 						clearTextBox(editCardFrame.cardAnswerTextBox)
-						editCardFrame:Hide()
-						modifyDeckFrame:ClearAllPoints() -- Frames can have up to 5 anchor points, remove them to prevent errors as we reset its position
-						modifyDeckFrame:SetPoint(commonFrameAttributes.menuCurrentAnchorPoint, commonFrameAttributes.menuCurrentAnchorRelativeTo, commonFrameAttributes.menuCurrentRelativePoint, commonFrameAttributes.menuCurrentXOffsetFromCenter, commonFrameAttributes.menuCurrentYOffsetFromCenter) -- Move the frame to where previous frame was in case user dragged it so that it doesn't appear in a different position when the button is pressed
-						modifyDeckFrame:Show()
+						editCardFrame.Frame:Hide()
+						modifyDeckFrame.Frame:ClearAllPoints() -- Frames can have up to 5 anchor points, remove them to prevent errors as we reset its position
+						modifyDeckFrame.Frame:SetPoint(commonFrameAttributes.menuCurrentAnchorPoint, commonFrameAttributes.menuCurrentAnchorRelativeTo, commonFrameAttributes.menuCurrentRelativePoint, commonFrameAttributes.menuCurrentXOffsetFromCenter, commonFrameAttributes.menuCurrentYOffsetFromCenter) -- Move the frame to where previous frame was in case user dragged it so that it doesn't appear in a different position when the button is pressed
+						modifyDeckFrame.Frame:Show()
 						print("Card has been saved.")
 					else
 						print("Another card with that question already exists.")
