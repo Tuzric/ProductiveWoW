@@ -156,6 +156,11 @@ function ProductiveWoW_getCardQuestion(deckName, cardId)
 	return ProductiveWoW_getCardByID(deckName, cardId)[QUESTION_KEY]
 end
 
+-- Get card's answer
+function ProductiveWoW_getCardAnswer(deckName, cardId)
+	return ProductiveWoW_getCardByID(deckName, cardId)[ANSWER_KEY]
+end
+
 -- Get card date last played
 function ProductiveWoW_getCardDateLastPlayed(deckName, cardId)
 	return ProductiveWoW_getCardByID(deckName, cardId)[DATE_LAST_PLAYED_KEY]
@@ -306,11 +311,6 @@ function ProductiveWoW_deckExistsInBulkImportFile(deckName)
 	return false
 end
 
--- Check if a question already exists
-function ProductiveWoW_questionAlreadyExistsInDeck(question, deckName)
-	return ProductiveWoW_getCardByQuestion(deckName, question) ~= nil
-end
-
 -- Check if this is the first time playing the deck today
 function ProductiveWoW_isDeckNotPlayedYetToday(deckName)
 	local deck = ProductiveWoW_getDeck(deckName)
@@ -359,6 +359,21 @@ local function updateCardValues()
 			setCardTableMissingKeys(card)
 		end
 	end
+end
+
+-- Check if a question already exists
+function ProductiveWoW_questionAlreadyExistsInDeck(question, deckName)
+	return ProductiveWoW_getCardByQuestion(deckName, question) ~= nil
+end
+
+-- Check if a card exists in ProductiveWoWDecks.lua where decks are bulk imported from
+function ProductiveWoW_cardExistsInBulkImportFile(deckName, cardQuestion)
+	if ProductiveWoW_deckExistsInBulkImportFile(deckName) then
+		if ProductiveWoW_inTableKeys(cardQuestion, ProductiveWoW_cardsToAdd[deckName]) then
+			return true
+		end
+	end
+	return false
 end
 
 -- Add a card
