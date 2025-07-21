@@ -307,26 +307,137 @@ multipleCardsDeletionConfirmationFrame.cancelButtonYOffset = -40
 local addCardFrame = {}
 addCardFrame.frameName = "AddCardFrame"
 addCardFrame.frameTitle = "Add Card"
+-- Question textbox
+addCardFrame.questionTextBoxName = "AddCardFrameQuestionTextBox"
+addCardFrame.questionTextBoxWidth = 200
+addCardFrame.questionTextBoxHeight = 20
+addCardFrame.questionTextBoxAnchor = ANCHOR_POINTS.CENTER
+addCardFrame.questionTextBoxXOffset = 0
+addCardFrame.questionTextBoxYOffset = 20
+addCardFrame.questionTextBoxGreyHintText = "Enter question..."
+-- Answer textbox
+addCardFrame.answerTextBoxName = "AddCardFrameQuestionTextBox"
+addCardFrame.answerTextBoxWidth = 200
+addCardFrame.answerTextBoxHeight = 20
+addCardFrame.answerTextBoxAnchor = ANCHOR_POINTS.CENTER
+addCardFrame.answerTextBoxXOffset = 0
+addCardFrame.answerTextBoxYOffset = -20
+addCardFrame.answerTextBoxGreyHintText = "Enter answer..."
+-- Add card button
+addCardFrame.addCardButtonName = "AddCardButton"
+addCardFrame.addCardButtonText = "Add"
+addCardFrame.addCardButtonAnchor = ANCHOR_POINTS.CENTER
+addCardFrame.addCardButtonXOffset = -100
+addCardFrame.addCardButtonYOffset = -50
+addCardFrame.cardAddedMessage = "Card has been added."
+addCardFrame.cardAlreadyExistsMessage = "A card with that question already exists."
+addCardFrame.noDeckSelectedMessage = "No deck is selected."
+addCardFrame.questionOrAnswerIsBlankMessage = "You have not entered a question or answer."
+addCardFrame.addCardButtonOnClick = nil -- Function to add a new card
+-- Back to modify deck frame button
+addCardFrame.navigateBackToModifyDeckFrameButtonName = "NavigateBackToModifyDeckFromAddCard"
+addCardFrame.navigateBackToModifyDeckFrameButtonText = "Back"
+addCardFrame.navigateBackToModifyDeckFrameButtonAnchor = ANCHOR_POINTS.CENTER
+addCardFrame.navigateBackToModifyDeckFrameButtonXOffset = 0
+addCardFrame.navigateBackToModifyDeckFrameButtonYOffset = -50
+addCardFrame.navigateBackToModifyDeckFrameButtonSound = SOUNDKIT.IG_CHARACTER_INFO_CLOSE
+-- Back to main menu button
+addCardFrame.navigateBackToMainMenuButtonName = "NavigateBackToMainMenuFromAddCard"
+addCardFrame.navigateBackToMainMenuButtonText = "Main Menu"
+addCardFrame.navigateBackToMainMenuButtonAnchor = ANCHOR_POINTS.CENTER
+addCardFrame.navigateBackToMainMenuButtonXOffset = 100
+addCardFrame.navigateBackToMainMenuButtonYOffset = -50
+addCardFrame.navigateBackToMainMenuButtonSound = SOUNDKIT.IG_CHARACTER_INFO_CLOSE
 
 -- Edit card frame
 local editCardFrame = {}
-local editCardFrameName = "EditCardFrame"
-local editCardFrameTitle = "Edit Card"
+editCardFrame.frameName = "EditCardFrame"
+editCardFrame.frameTitle = "Edit Card"
 editCardFrame.idOfCardBeingEdited = 0
-
--- Add and Edit Card frames variables in common
-local cardQuestionTextBoxGreyHintText = "Enter question..."
-local cardAnswerTextBoxGreyHintText = "Enter answer..."
+-- Question textbox
+editCardFrame.questionTextBoxName = "EditCardFrameQuestionTextBox"
+editCardFrame.questionTextBoxWidth = 200
+editCardFrame.questionTextBoxHeight = 20
+editCardFrame.questionTextBoxAnchor = ANCHOR_POINTS.CENTER
+editCardFrame.questionTextBoxXOffset = 0
+editCardFrame.questionTextBoxYOffset = 20
+editCardFrame.questionTextBoxGreyHintText = "Enter question..."
+-- Answer textbox
+editCardFrame.answerTextBoxName = "EditCardFrameAnswerTextBox"
+editCardFrame.answerTextBoxWidth = 200
+editCardFrame.answerTextBoxHeight = 20
+editCardFrame.answerTextBoxAnchor = ANCHOR_POINTS.CENTER
+editCardFrame.answerTextBoxXOffset = 0
+editCardFrame.answerTextBoxYOffset = -20
+editCardFrame.answerTextBoxGreyHintText = "Enter answer..."
+-- Save card button
+editCardFrame.saveCardButtonName = "SaveCardButton"
+editCardFrame.saveCardButtonText = "Save"
+editCardFrame.saveCardButtonAnchor = ANCHOR_POINTS.CENTER
+editCardFrame.saveCardButtonXOffset = -100
+editCardFrame.saveCardButtonYOffset = -50
+editCardFrame.saveCardButtonOnClick = nil -- Function to save the card
+editCardFrame.cardExistsInBulkImportFileMessage = "Could not save card since the question entered exists in ProductiveWoWDecks.lua and will be overwritten/deleted on the next login. Go to that file and modify the card there or remove it and try again through the UI."
+editCardFrame.cardSavedMessage = "Card has been saved."
+editCardFrame.duplicateQuestionMessage = "Another card with that question already exists."
+editCardFrame.noChangesMadeMessage = "You have not made any changes to the card."
+editCardFrame.noDeckSelectedMessage = "No deck is selected."
+editCardFrame.questionOrAnswerIsBlankMessage = "You have not entered a question or answer."
+-- Back to modify deck frame button
+editCardFrame.navigateBackToModifyDeckFrameButtonName = "NavigateBackToModifyDeckFromEditCard"
+editCardFrame.navigateBackToModifyDeckFrameButtonText = "Back"
+editCardFrame.navigateBackToModifyDeckFrameButtonAnchor = ANCHOR_POINTS.CENTER
+editCardFrame.navigateBackToModifyDeckFrameButtonXOffset = 0
+editCardFrame.navigateBackToModifyDeckFrameButtonYOffset = -50
+editCardFrame.navigateBackToModifyDeckFrameButtonSound = SOUNDKIT.IG_CHARACTER_INFO_CLOSE
+-- Back to main menu button
+editCardFrame.navigateBackToMainMenuButtonName = "NavigateBackToMainMenuFromEditCard"
+editCardFrame.navigateBackToMainMenuButtonText = "Main Menu"
+editCardFrame.navigateBackToMainMenuButtonAnchor = ANCHOR_POINTS.CENTER
+editCardFrame.navigateBackToMainMenuButtonXOffset = 100
+editCardFrame.navigateBackToMainMenuButtonYOffset = -50
+editCardFrame.navigateBackToMainMenuButtonSound = SOUNDKIT.IG_CHARACTER_INFO_CLOSE
 
 -- Flashcard frame
 local flashcardFrame = {}
-local flashcardFrameName = "FlashcardFrame"
-local flashcardFrameTitlePrefix = "Deck: " -- Title changes to display deck name when you navigate to this frame
+flashcardFrame.frameName = "FlashcardFrame"
+flashcardFrame.titlePrefix = "Deck: " -- Title changes to display deck name when you navigate to this frame
 
 -- Deck settings frame
 local deckSettingsFrame = {}
-local deckSettingsFrameName = "DeckSettingsFrame"
-local deckSettingsFrameTitlePrefix = "Deck Settings - "
+deckSettingsFrame.frameName = "DeckSettingsFrame"
+deckSettingsFrame.titlePrefix = "Deck Settings - "
+-- Back to modify deck frame button
+deckSettingsFrame.navigateBackToModifyDeckFrameButtonName = "NavigateBackToModifyDeckFromDeckSettings"
+deckSettingsFrame.navigateBackToModifyDeckFrameButtonText = "Back"
+deckSettingsFrame.navigateBackToModifyDeckFrameButtonAnchor = ANCHOR_POINTS.BOTTOMRIGHT
+deckSettingsFrame.navigateBackToModifyDeckFrameButtonXOffset = -20
+deckSettingsFrame.navigateBackToModifyDeckFrameButtonYOffset = 20
+deckSettingsFrame.navigateBackToModifyDeckFrameButtonSound = SOUNDKIT.IG_CHARACTER_INFO_CLOSE
+-- Max daily cards text
+deckSettingsFrame.maxCardsTextAnchor = ANCHOR_POINTS.TOPLEFT
+deckSettingsFrame.maxCardsTextParentAnchor = ANCHOR_POINTS.TOPLEFT
+deckSettingsFrame.maxCardsTextXOffset = 20
+deckSettingsFrame.maxCardsTextYOffset = -40
+deckSettingsFrame.maxCardsTextValue = "Max daily cards: "
+-- Max daily cards textbox
+deckSettingsFrame.maxCardsTextBoxName = "MaxDailyCardsTextBox"
+deckSettingsFrame.maxCardsTextBoxWidth = 40
+deckSettingsFrame.maxCardsTextBoxHeight = 20
+deckSettingsFrame.maxCardsTextBoxAnchor = ANCHOR_POINTS.TOPLEFT
+deckSettingsFrame.maxCardsTextBoxXOffset = 140
+deckSettingsFrame.maxCardsTextBoxYOffset = -36
+-- Save settings button
+deckSettingsFrame.saveDeckSettingsButtonName = "SaveSettingsButton"
+deckSettingsFrame.saveDeckSettingsButtonText = "Save"
+deckSettingsFrame.saveDeckSettingsButtonAnchor = ANCHOR_POINTS.BOTTOMLEFT
+deckSettingsFrame.saveDeckSettingsButtonXOffset = 20
+deckSettingsFrame.saveDeckSettingsButtonYOffset = 20
+deckSettingsFrame.saveDeckSettingsButtonOnClick = nil -- Function to save the deck settings
+deckSettingsFrame.maxDailyCardsHasToBeNumericMessage = "Max daily cards has to be a number."
+deckSettingsFrame.maxDailyCardsCannotBeZeroOrLessMessage = "Max daily cards cannot be 0 or less than 0."
+deckSettingsFrame.noChangesMadeMessage = "No changes were made so nothing was saved."
+deckSettingsFrame.settingsSavedMessage = "Settings saved."
 
 
 -- FUNCTIONS
@@ -528,10 +639,10 @@ local function createAllBaseFrames()
 	deleteDeckFrame.Frame = createFrame(deleteDeckFrame.frameName, UIParent, deleteDeckFrame.frameTitle)
 	modifyDeckFrame.Frame = createFrame(modifyDeckFrame.frameName, UIParent, "", modifyDeckFrame.width, modifyDeckFrame.height)
 	addCardFrame.Frame = createFrame(addCardFrame.frameName, UIParent, addCardFrame.frameTitle)
-	editCardFrame.Frame = createFrame(editCardFrameName, UIParent, editCardFrameTitle)
-	flashcardFrame.Frame = createFrame(flashcardFrameName, UIParent)
+	editCardFrame.Frame = createFrame(editCardFrame.frameName, UIParent, editCardFrame.frameTitle)
+	flashcardFrame.Frame = createFrame(flashcardFrame.frameName, UIParent)
 	multipleCardsDeletionConfirmationFrame.Frame = createFrame(multipleCardsDeletionConfirmationFrame.frameName, UIParent, multipleCardsDeletionConfirmationFrame.frameTitle)
-	deckSettingsFrame.Frame = createFrame(deckSettingsFrameName, UIParent, "")
+	deckSettingsFrame.Frame = createFrame(deckSettingsFrame.frameName, UIParent, "")
 end
 
 -- Configure the main menu frame
@@ -611,7 +722,7 @@ local function configureMainMenuFrame()
 		end
 	end
 	function mainMenu.navigateToFlashcardFrameButtonOnNavigation()
-		flashcardFrame.Frame.title:SetText(flashcardFrameTitlePrefix .. ProductiveWoW_getCurrentDeckName())
+		flashcardFrame.Frame.title:SetText(flashcardFrame.titlePrefix .. ProductiveWoW_getCurrentDeckName())
 		flashcardFrame.easyDifficultyButton:Hide()
 		flashcardFrame.mediumDifficultyButton:Hide()
 		flashcardFrame.hardDifficultyButton:Hide()
@@ -675,7 +786,7 @@ local function configureModifyDeckFrame()
 
 	-- Navigate to deck settings button
 	function modifyDeckFrame.navigateToDeckSettingsFrameOnClick()
-		deckSettingsFrame.Frame.title:SetText(deckSettingsFrameTitlePrefix .. ProductiveWoW_getCurrentDeckName())
+		deckSettingsFrame.Frame.title:SetText(deckSettingsFrame.titlePrefix .. ProductiveWoW_getCurrentDeckName())
 	end
 	modifyDeckFrame.navigateToDeckSettingsButton = createNavigationButton(modifyDeckFrame.navigateToDeckSettingsButtonName, modifyDeckFrame.Frame, modifyDeckFrame.navigateToDeckSettingsButtonText, modifyDeckFrame.navigateToDeckSettingsButtonAnchor, modifyDeckFrame.navigateToDeckSettingsButtonXOffset, modifyDeckFrame.navigateToDeckSettingsButtonYOffset, deckSettingsFrame.Frame, nil, modifyDeckFrame.navigateToDeckSettingsFrameOnClick)
 
@@ -985,7 +1096,152 @@ end
 
 -- Configure add card frame
 local function configureAddCardFrame()
+	-- Card Question Text Box
+	addCardFrame.questionTextBox = createTextBox(addCardFrame.questionTextBoxName, addCardFrame.Frame, addCardFrame.questionTextBoxWidth, addCardFrame.questionTextBoxHeight, addCardFrame.questionTextBoxAnchor, addCardFrame.questionTextBoxXOffset, addCardFrame.questionTextBoxYOffset, addCardFrame.questionTextBoxGreyHintText)
 
+	-- Card Answer Text Box
+	addCardFrame.answerTextBox = createTextBox(addCardFrame.answerTextBoxName, addCardFrame.Frame, addCardFrame.answerTextBoxWidth, addCardFrame.answerTextBoxHeight, addCardFrame.answerTextBoxAnchor, addCardFrame.answerTextBoxXOffset, addCardFrame.answerTextBoxYOffset, addCardFrame.answerTextBoxGreyHintText)
+
+	-- Add card button
+	function addCardFrame.addCardButtonOnClick()
+		local question = addCardFrame.questionTextBox:GetText()
+		local answer = addCardFrame.answerTextBox:GetText()
+		if question ~= "" and answer ~= "" and question ~= addCardFrame.questionTextBoxGreyHintText and answer ~= addCardFrame.answerTextBoxGreyHintText then
+			local deckName = ProductiveWoW_getCurrentDeckName()
+			if deckName ~= nil then
+				if ProductiveWoW_getCardByQuestion(deckName, question) == nil then
+					ProductiveWoW_addCard(deckName, question, answer)
+					clearTextBox(addCardFrame.questionTextBox)
+					clearTextBox(addCardFrame.answerTextBox)
+					print(addCardFrame.cardAddedMessage)
+				else	
+					print(addCardFrame.cardAlreadyExistsMessage)
+				end
+			else
+				print(addCardFrame.noDeckSelectedMessage)
+			end
+		else
+			print(addCardFrame.questionOrAnswerIsBlankMessage)
+		end
+	end
+	addCardFrame.addCardButton = createButton(addCardFrame.addCardButtonName, addCardFrame.Frame, addCardFrame.addCardButtonText, addCardFrame.addCardButtonAnchor, addCardFrame.addCardButtonXOffset, addCardFrame.addCardButtonYOffset, addCardFrame.addCardButtonOnClick)
+
+	-- Back to Modify Deck frame button
+	addCardFrame.navigateBackToModifyDeckFrameButton = createNavigationButton(addCardFrame.navigateBackToModifyDeckFrameButtonName, addCardFrame.Frame, addCardFrame.navigateBackToModifyDeckFrameButtonText, addCardFrame.navigateBackToModifyDeckFrameButtonAnchor, addCardFrame.navigateBackToModifyDeckFrameButtonXOffset, addCardFrame.navigateBackToModifyDeckFrameButtonYOffset, modifyDeckFrame.Frame, addCardFrame.navigateBackToModifyDeckFrameButtonSound)
+
+	-- Back to main menu button
+	addCardFrame.navigateBackToMainMenuButton = createNavigationButton(addCardFrame.navigateBackToMainMenuButtonName, addCardFrame.Frame, addCardFrame.navigateBackToMainMenuButtonText, addCardFrame.navigateBackToMainMenuButtonAnchor, addCardFrame.navigateBackToMainMenuButtonXOffset, addCardFrame.navigateBackToMainMenuButtonYOffset, mainMenu.Frame, addCardFrame.navigateBackToMainMenuButtonSound)
+end
+
+-- Congigure edit card frame
+local function configureEditCardFrame()
+	-- Card Question Text Box
+	editCardFrame.questionTextBox = createTextBox(editCardFrame.questionTextBoxName, editCardFrame.Frame, editCardFrame.questionTextBoxWidth, editCardFrame.questionTextBoxHeight, editCardFrame.questionTextBoxAnchor, editCardFrame.questionTextBoxXOffset, editCardFrame.questionTextBoxYOffset, editCardFrame.questionTextBoxGreyHintText)
+
+	-- Card Answer Text Box
+	editCardFrame.answerTextBox = createTextBox(editCardFrame.answerTextBoxName, editCardFrame.Frame, editCardFrame.answerTextBoxWidth, editCardFrame.answerTextBoxHeight, editCardFrame.answerTextBoxAnchor, editCardFrame.answerTextBoxXOffset, editCardFrame.answerTextBoxYOffset, editCardFrame.answerTextBoxGreyHintText)
+
+	-- Save card button
+	function editCardFrame.saveCardButtonOnClick()
+		local newQuestion = editCardFrame.questionTextBox:GetText()
+		local newAnswer = editCardFrame.answerTextBox:GetText()
+		local deckName = ProductiveWoW_getCurrentDeckName()
+		local card = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(editCardFrame.idOfCardBeingEdited)
+		local existingQuestion = ProductiveWoW_getCardQuestion(deckName, editCardFrame.idOfCardBeingEdited)
+		local existingAnswer = ProductiveWoW_getCardAnswer(deckName, editCardFrame.idOfCardBeingEdited)
+		if not ProductiveWoW_stringContainsOnlyWhitespace(newQuestion) and not ProductiveWoW_stringContainsOnlyWhitespace(newAnswer) and newQuestion ~= editCardFrame.questionTextBoxGreyHintText and newAnswer ~= editCardFrame.answerTextBoxGreyHintText then
+			if deckName ~= nil then
+				if newQuestion ~= existingQuestion or newAnswer ~= existingAnswer then
+					if ProductiveWoW_getCardByQuestion(deckName, newQuestion) == nil or newQuestion == existingQuestion then
+						if ProductiveWoW_cardExistsInBulkImportFile(deckName, newQuestion) then
+							print(editCardFrame.cardExistsInBulkImportFileMessage)
+							return
+						end
+						card.question = newQuestion
+						card.answer = newAnswer
+						clearTextBox(editCardFrame.questionTextBox)
+						clearTextBox(editCardFrame.answerTextBox)
+						editCardFrame.Frame:Hide()
+						repositionAndShowFrame(modifyDeckFrame.Frame)
+						print(editCardFrame.cardSavedMessage)
+					else
+						print(editCardFrame.duplicateQuestionMessage)
+					end
+				else	
+					print(editCardFrame.noChangesMadeMessage)
+				end
+			else
+				print(editCardFrame.noDeckSelectedMessage)
+			end
+		else
+			print(editCardFrame.questionOrAnswerIsBlankMessage)
+		end
+	end
+	editCardFrame.saveCardButton = createButton(editCardFrame.saveCardButtonName, editCardFrame.Frame, editCardFrame.saveCardButtonText, editCardFrame.saveCardButtonAnchor, editCardFrame.saveCardButtonXOffset, editCardFrame.saveCardButtonYOffset, editCardFrame.saveCardButtonOnClick)
+
+	-- Back to Modify Deck frame button
+	editCardFrame.navigateBackToModifyDeckFrameButton = createNavigationButton(editCardFrame.navigateBackToModifyDeckFrameButtonName, editCardFrame.Frame, editCardFrame.navigateBackToModifyDeckFrameButtonText, editCardFrame.navigateBackToModifyDeckFrameButtonAnchor, editCardFrame.navigateBackToModifyDeckFrameButtonXOffset, editCardFrame.navigateBackToModifyDeckFrameButtonYOffset, modifyDeckFrame.Frame, editCardFrame.navigateBackToModifyDeckFrameButtonSound)
+
+	-- Back to main menu button
+	editCardFrame.navigateBackToMainMenuButton = createNavigationButton(editCardFrame.navigateBackToMainMenuButtonName, editCardFrame.Frame, editCardFrame.navigateBackToMainMenuButtonText, editCardFrame.navigateBackToMainMenuButtonAnchor, editCardFrame.navigateBackToMainMenuButtonXOffset, editCardFrame.navigateBackToMainMenuButtonYOffset, mainMenu.Frame, editCardFrame.navigateBackToMainMenuButtonSound)
+
+	-- Populate textboxes with card's question and answer
+	editCardFrame.Frame:SetScript(EVENTS.ON_SHOW, function(self)
+		local currentDeckName = ProductiveWoW_getCurrentDeckName()
+		local existingQuestion = ProductiveWoW_getCardQuestion(currentDeckName, editCardFrame.idOfCardBeingEdited)
+		local existingAnswer = ProductiveWoW_getCardAnswer(currentDeckName, editCardFrame.idOfCardBeingEdited)
+		editCardFrame.questionTextBox:SetText(existingQuestion)
+		editCardFrame.answerTextBox:SetText(existingAnswer)
+		editCardFrame.questionTextBox:SetCursorPosition(0)
+		editCardFrame.questionTextBox:SetTextColor(unpack(COLOURS.WHITE))
+		editCardFrame.answerTextBox:SetCursorPosition(0)
+		editCardFrame.answerTextBox:SetTextColor(unpack(COLOURS.WHITE))
+	end)
+end
+
+-- Configure deck settings frame
+local function configureDeckSettingsFrame()
+	-- Back button
+	deckSettingsFrame.navigateBackToModifyDeckFrameButton = createNavigationButton(deckSettingsFrame.navigateBackToModifyDeckFrameButtonName, deckSettingsFrame.Frame, deckSettingsFrame.navigateBackToModifyDeckFrameButtonText, deckSettingsFrame.navigateBackToModifyDeckFrameButtonAnchor, deckSettingsFrame.navigateBackToModifyDeckFrameButtonXOffset, deckSettingsFrame.navigateBackToModifyDeckFrameButtonYOffset, modifyDeckFrame.Frame, deckSettingsFrame.navigateBackToModifyDeckFrameButtonSound)
+
+	-- Max cards to be tested per day text
+	deckSettingsFrame.maxCardsText = createText(deckSettingsFrame.maxCardsTextAnchor, deckSettingsFrame.Frame, deckSettingsFrame.maxCardsTextParentAnchor, deckSettingsFrame.maxCardsTextXOffset, deckSettingsFrame.maxCardsTextYOffset, deckSettingsFrame.maxCardsTextValue)
+
+	-- Max daily cards textbox
+	deckSettingsFrame.maxCardsTextBox = createTextBox(deckSettingsFrame.maxCardsTextBoxName, deckSettingsFrame.Frame, deckSettingsFrame.maxCardsTextBoxWidth, deckSettingsFrame.maxCardsTextBoxHeight, deckSettingsFrame.maxCardsTextBoxAnchor, deckSettingsFrame.maxCardsTextBoxXOffset, deckSettingsFrame.maxCardsTextBoxYOffset)
+
+	-- Save button
+	function deckSettingsFrame.saveDeckSettingsButtonOnClick()
+		local anySettingChanged = false
+		local otherErrorMessageDisplayed = false
+		local maxDailyCards = deckSettingsFrame.maxCardsTextBox:GetText()
+		local currentDeckName = ProductiveWoW_getCurrentDeckName()
+		local currentDeck = ProductiveWoW_getCurrentDeck()
+		local currentMaxDailyCards = ProductiveWoW_getDeckDailyNumberOfCards(currentDeckName)
+		if not ProductiveWoW_isNumeric(maxDailyCards) then
+			print(deckSettingsFrame.maxDailyCardsHasToBeNumericMessage)
+			otherErrorMessageDisplayed = true
+		elseif tonumber(maxDailyCards) <= 0 then
+			print(deckSettingsFrame.maxDailyCardsCannotBeZeroOrLessMessage)
+			otherErrorMessageDisplayed = true		
+		elseif tonumber(maxDailyCards) ~= currentMaxDailyCards then
+			ProductiveWoW_setMaxDailyCardsForDeck(currentDeckName, tonumber(maxDailyCards))
+			ProductiveWoW_setDeckNotPlayedYetToday(currentDeckName) -- When max card limit changes, reset the deck
+			anySettingChanged = true
+		end
+		if anySettingChanged == true then
+			print(deckSettingsFrame.settingsSavedMessage)
+		elseif anySettingChanged == false and otherErrorMessageDisplayed == false then
+			print(deckSettingsFrame.noChangesMadeMessage)
+		end
+	end
+	deckSettingsFrame.saveDeckSettingsButton = createButton(deckSettingsFrame.saveDeckSettingsButtonName, deckSettingsFrame.Frame, deckSettingsFrame.saveDeckSettingsButtonText, deckSettingsFrame.saveDeckSettingsButtonAnchor, deckSettingsFrame.saveDeckSettingsButtonXOffset, deckSettingsFrame.saveDeckSettingsButtonYOffset, deckSettingsFrame.saveDeckSettingsButtonOnClick)
+
+	deckSettingsFrame.Frame:SetScript(EVENTS.ON_SHOW, function()
+		local maxCards = ProductiveWoW_getDeckDailyNumberOfCards(ProductiveWoW_getCurrentDeckName())
+		deckSettingsFrame.maxCardsTextBox:SetText(maxCards)
+		deckSettingsFrame.maxCardsTextBox:SetTextColor(unpack(COLOURS.WHITE))
+	end)
 end
 
 
@@ -1005,115 +1261,9 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 	configureDeleteDeckFrame()
 	configureModifyDeckFrame()
 	configureAddCardFrame()
-
+	configureEditCardFrame()	
+	configureDeckSettingsFrame()
 	
-	-- EDIT CARD FRAME
-	-- Card Question Text Box
-	editCardFrame.cardQuestionTextBox = createTextBox("EditCardCardQuestionTextBox", editCardFrame.Frame, 300, 20, "CENTER", 0, 20, cardQuestionTextBoxGreyHintText)
-
-	-- Card Answer Text Box
-	editCardFrame.cardAnswerTextBox = createTextBox("EditCardCardAnswerTextBox", editCardFrame.Frame, 300, 20, "CENTER", 0, -20, cardAnswerTextBoxGreyHintText)
-
-	-- Save card button
-	local function saveCardButtonOnClick()
-		local newQuestion = editCardFrame.cardQuestionTextBox:GetText()
-		local newAnswer = editCardFrame.cardAnswerTextBox:GetText()
-		local deck_name = ProductiveWoWSavedSettings["currently_selected_deck"]
-		local card = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(editCardFrame.idOfCardBeingEdited)
-		if not ProductiveWoW_stringContainsOnlyWhitespace(newQuestion) and not ProductiveWoW_stringContainsOnlyWhitespace(newAnswer) and newQuestion ~= cardQuestionTextBoxGreyHintText and newAnswer ~= cardAnswerTextBoxGreyHintText then
-			if deck_name ~= nil then
-				if newQuestion ~= card.question or newAnswer ~= card.answer then
-					if ProductiveWoW_getCardByQuestion(deck_name, newQuestion) == nil or newQuestion == card.question then
-						if ProductiveWoW_cardsToAdd[deck_name] ~= nil then
-							if ProductiveWoW_inTableKeys(ProductiveWoW_cardsToAdd[deck_name], newQuestion) then
-								print("Could not save card since the question entered exists in ProductiveWoWDecks.lua cardsToAdd and will be overwritten on the next login. Go to that file and modify the card there or remove it and try again through the UI.")
-								return
-							elseif ProductiveWoW_cardsToDelete[deck_name] ~= nil then
-								if ProductiveWoW_inTableKeys(ProductiveWoW_cardsToDelete[deck_name], newQuestion) then
-									print("Could not save card since the question entered exists in ProductiveWoWDecks.lua cardsToDelete and will automatically be deleted on the next login. Go to the file and remove it from cardsToDelete, re-log, and try to edit the card again.")
-									return
-								end
-							end
-						end
-						card.question = newQuestion
-						card.answer = newAnswer
-						clearTextBox(editCardFrame.cardQuestionTextBox)
-						clearTextBox(editCardFrame.cardAnswerTextBox)
-						editCardFrame.Frame:Hide()
-						modifyDeckFrame.Frame:ClearAllPoints() -- Frames can have up to 5 anchor points, remove them to prevent errors as we reset its position
-						modifyDeckFrame.Frame:SetPoint(commonFrameAttributes.menuCurrentAnchorPoint, commonFrameAttributes.menuCurrentAnchorRelativeTo, commonFrameAttributes.menuCurrentRelativePoint, commonFrameAttributes.menuCurrentXOffsetFromCenter, commonFrameAttributes.menuCurrentYOffsetFromCenter) -- Move the frame to where previous frame was in case user dragged it so that it doesn't appear in a different position when the button is pressed
-						modifyDeckFrame.Frame:Show()
-						print("Card has been saved.")
-					else
-						print("Another card with that question already exists.")
-					end
-				else	
-					print("You have not made any changes to the card.")
-				end
-			else
-				print("No deck is selected.")
-			end
-		else
-			print("You have not entered a question or answer.")
-		end
-	end
-	editCardFrame.saveCardButton = createButton("SaveCardButton", editCardFrame.Frame, "Save", "CENTER", -100, -50, saveCardButtonOnClick)
-
-	-- Back to Modify Deck frame button
-	editCardFrame.navigateBackToModifyDeckFrameButton = createNavigationButton("NavigateBackToModifyDeckFrameButtonFromEditCardFrame", editCardFrame.Frame, "Back", "CENTER", 0, -50, modifyDeckFrame.Frame, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
-
-	-- Back to main menu button
-	editCardFrame.navigateBackToMainMenuButton = createNavigationButton("NavigateBackToMainMenuButtonFromEditCardFrame", editCardFrame.Frame, "Main Menu", "CENTER", 100, -50, mainMenu.Frame, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
-
-	-- Populate textboxes with card's question and answer
-	editCardFrame.Frame:SetScript("OnShow", function(self) 
-		local card = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(editCardFrame.idOfCardBeingEdited)
-		editCardFrame.cardQuestionTextBox:SetText(card.question)
-		editCardFrame.cardAnswerTextBox:SetText(card.answer)
-		editCardFrame.cardQuestionTextBox:SetCursorPosition(0)
-		editCardFrame.cardQuestionTextBox:SetTextColor(1, 1, 1)
-		editCardFrame.cardAnswerTextBox:SetCursorPosition(0)
-		editCardFrame.cardAnswerTextBox:SetTextColor(1, 1, 1)
-	end)
-
-
-	-- ADD CARD FRAME
-	-- Card Question Text Box
-	addCardFrame.cardQuestionTextBox = createTextBox("CardQuestionTextBox", addCardFrame.Frame, 300, 20, "CENTER", 0, 20, cardQuestionTextBoxGreyHintText)
-
-	-- Card Answer Text Box
-	addCardFrame.cardAnswerTextBox = createTextBox("CardAnswerTextBox", addCardFrame.Frame, 300, 20, "CENTER", 0, -20, cardAnswerTextBoxGreyHintText)
-
-	-- Add card button
-	local function addCardButtonOnClick()
-		local question = addCardFrame.cardQuestionTextBox:GetText()
-		local answer = addCardFrame.cardAnswerTextBox:GetText()
-		if question ~= "" and answer ~= "" and question ~= cardQuestionTextBoxGreyHintText and answer ~= cardAnswerTextBoxGreyHintText then
-			local deck_name = ProductiveWoWSavedSettings["currently_selected_deck"]
-			if deck_name ~= nil then
-				if ProductiveWoW_getCardByQuestion(deck_name, question) == nil then
-					ProductiveWoW_addCard(ProductiveWoWSavedSettings["currently_selected_deck"], question, answer)
-					clearTextBox(addCardFrame.cardQuestionTextBox)
-					clearTextBox(addCardFrame.cardAnswerTextBox)
-					print("Card has been added.")
-				else	
-					print("A card with that question already exists.")
-				end
-			else
-				print("No deck is selected.")
-			end
-		else
-			print("You have not entered a question or answer.")
-		end
-	end
-	addCardFrame.addCardButton = createButton("AddCardButton", addCardFrame.Frame, "Add", "CENTER", -100, -50, addCardButtonOnClick)
-
-	-- Back to Modify Deck frame button
-	addCardFrame.navigateBackToModifyDeckFrameButton = createNavigationButton("NavigateBackToModifyDeckFrameButton", addCardFrame.Frame, "Back", "CENTER", 0, -50, modifyDeckFrame.Frame, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
-
-	-- Back to main menu button
-	addCardFrame.navigateBackToMainMenuButton = createNavigationButton("NavigateBackToMainMenuButtonFromAddCardFrame", addCardFrame.Frame, "Main Menu", "CENTER", 100, -50, mainMenu.Frame, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
-
 
 	-- FLASHCARD FRAME
 	flashcardFrame.Frame:SetSize(commonFrameAttributes.basicFrameWidth + 100, commonFrameAttributes.basicFrameHeight + 100)
@@ -1201,46 +1351,4 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 		ProductiveWoW_beginQuiz()
 		showNextCard()
 	end)
-
-
-	-- DECK SETTINGS FRAME --
-	-- Back button
-	deckSettingsFrame.navigateBackToModifyDeckFrameFromDeckSettingsFrameButton = createNavigationButton("NavigateBackToModifyDeckFrameFromDeckSettingsFrameButton", deckSettingsFrame.Frame, "Back", "BOTTOMRIGHT", -20, 20, modifyDeckFrame.Frame, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
-
-	-- Max cards to be tested per day text
-	deckSettingsFrame.maxCardsText = createText("TOPLEFT", deckSettingsFrame.Frame, "TOPLEFT", 20, -40, "Max Daily Cards: ")
-
-	-- Max daily cards textbox
-	deckSettingsFrame.maxCardsTextBox = createTextBox("MaxCardsTextBox", deckSettingsFrame.Frame, 40, 20, "TOPLEFT", 140, -36)
-
-	-- Save button
-	local function saveDeckSettingsButtonOnClick()
-		local anySettingChanged = false
-		local maxDailyCards = deckSettingsFrame.maxCardsTextBox:GetText()
-		local currentDeckName = ProductiveWoW_getCurrentDeckName()
-		local currentDeck = ProductiveWoW_getCurrentDeck()
-		local currentMaxDailyCards = currentDeck["daily number of cards"]
-		if not ProductiveWoW_isNumeric(maxDailyCards) then
-			print("Max daily cards has to be a number.")
-		elseif tonumber(maxDailyCards) <= 0 then
-			print("Max daily cards cannot be 0 or less than 0.")
-		elseif tonumber(maxDailyCards) == tonumber(currentMaxDailyCards) then
-			print("No changes were made so nothing was saved.")
-		else
-			ProductiveWoW_setMaxDailyCardsForDeck(currentDeckName, tonumber(maxDailyCards))
-			ProductiveWoW_setDeckNotPlayedYetToday(currentDeckName) -- When max card limit changes, reset the deck
-			anySettingChanged = true
-		end
-		if anySettingChanged == true then
-			print("Settings saved.")
-		end
-	end
-	deckSettingsFrame.saveDeckSettingsButton = createButton("SaveDeckSettingsButton", deckSettingsFrame.Frame, "Save", "BOTTOMLEFT", 20, 20, saveDeckSettingsButtonOnClick)
-
-	deckSettingsFrame.Frame:SetScript("OnShow", function()
-		local maxCards = ProductiveWoW_getCurrentDeck()["daily number of cards"]
-		deckSettingsFrame.maxCardsTextBox:SetText(maxCards)
-		deckSettingsFrame.maxCardsTextBox:SetTextColor(1, 1, 1)
-	end)
-
 end)

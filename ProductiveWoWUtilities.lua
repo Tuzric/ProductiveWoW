@@ -41,6 +41,16 @@ function ProductiveWoW_inTableKeys(valueToCheck, tbl)
 	return false
 end
 
+-- Check if a value exists in a table's values
+function ProductiveWoW_inTable(valueToCheck, tbl)
+	for key, value in pairs(tbl) do
+		if value == valueToCheck then
+			return true
+		end
+	end
+	return false
+end
+
 -- Remove an element from an array by value
 function ProductiveWoW_removeByValue(value, tbl)
 	if not ProductiveWoW_tableIsArray(tbl) then

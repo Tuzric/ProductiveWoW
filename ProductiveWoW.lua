@@ -305,7 +305,7 @@ end
 
 -- Check if a deck exists in ProductiveWoWDecks.lua where decks are bulk imported from
 function ProductiveWoW_deckExistsInBulkImportFile(deckName)
-	if ProductiveWoW_inTableKeys(deckName, ProductiveWoW_cardsToAdd) or ProductiveWoW_ankiDeckName == deckName then
+	if ProductiveWoW_inTableKeys(deckName, ProductiveWoW_cardsToAdd) or ProductiveWoW_ankiDeckName == deckName or ProductiveWoW_inTableKeys(deckName, ProductiveWoW_cardsToDelete) then
 		return true
 	end
 	return false
@@ -369,7 +369,7 @@ end
 -- Check if a card exists in ProductiveWoWDecks.lua where decks are bulk imported from
 function ProductiveWoW_cardExistsInBulkImportFile(deckName, cardQuestion)
 	if ProductiveWoW_deckExistsInBulkImportFile(deckName) then
-		if ProductiveWoW_inTableKeys(cardQuestion, ProductiveWoW_cardsToAdd[deckName]) then
+		if ProductiveWoW_inTableKeys(cardQuestion, ProductiveWoW_cardsToAdd[deckName]) or ProductiveWoW_inTable(cardQuestion, ProductiveWoW_cardsToDelete[deckName]) then
 			return true
 		end
 	end
