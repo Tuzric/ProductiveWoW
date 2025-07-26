@@ -402,6 +402,48 @@ editCardFrame.navigateBackToMainMenuButtonSound = SOUNDKIT.IG_CHARACTER_INFO_CLO
 local flashcardFrame = {}
 flashcardFrame.frameName = "FlashcardFrame"
 flashcardFrame.titlePrefix = "Deck: " -- Title changes to display deck name when you navigate to this frame
+flashcardFrame.width = commonFrameAttributes.basicFrameWidth + 100
+flashcardFrame.height = commonFrameAttributes.basicFrameHeight + 100
+-- Displayed text
+flashcardFrame.textTopLeftAnchorXOffset = 15
+flashcardFrame.textTopLeftAnchorYOffset = -10
+flashcardFrame.textBottomRightAnchorXOffset = -15
+flashcardFrame.textBottomRightAnchorYOffset = 20
+flashcardFrame.showNextCard = nil -- Function to display next card
+flashcardFrame.showAnswerButtonOnClick = nil -- Function that runs when "Show" button is clicked
+-- Show answer button
+flashcardFrame.showAnswerButtonName = "ShowAnswerButton"
+flashcardFrame.showAnswerButtonText = "Show"
+flashcardFrame.showAnswerButtonAnchor = ANCHOR_POINTS.BOTTOMLEFT
+flashcardFrame.showAnswerButtonXOffset = 20
+flashcardFrame.showAnswerButtonYOffset = 20
+-- Easy/Medium/Hard Buttons
+flashcardFrame.nextQuestion = nil -- Function to go to the next question
+flashcardFrame.easyDifficultyButtonOnClick = nil -- Function when Easy button is clicked
+flashcardFrame.easyDifficultyButtonName = "EasyDifficultyButton"
+flashcardFrame.easyDifficultyButtonText = "Easy"
+flashcardFrame.easyDifficultyButtonAnchor = ANCHOR_POINTS.BOTTOMLEFT
+flashcardFrame.easyDifficultyButtonXOffset = 20
+flashcardFrame.easyDifficultyButtonYOffset = 20
+flashcardFrame.mediumDifficultyButtonOnClick = nil -- Function when Medium button is clicked
+flashcardFrame.mediumDifficultyButtonName = "MediumDifficultyButton"
+flashcardFrame.mediumDifficultyButtonText = "Medium"
+flashcardFrame.mediumDifficultyButtonAnchor = ANCHOR_POINTS.BOTTOMLEFT
+flashcardFrame.mediumDifficultyButtonXOffset = 120
+flashcardFrame.mediumDifficultyButtonYOffset = 20
+flashcardFrame.hardDifficultyButtonOnClick = nil -- Function when Hard button is clicked
+flashcardFrame.hardDifficultyButtonName = "HardDifficultyButton"
+flashcardFrame.hardDifficultyButtonText = "Hard"
+flashcardFrame.hardDifficultyButtonAnchor = ANCHOR_POINTS.BOTTOMLEFT
+flashcardFrame.hardDifficultyButtonXOffset = 220
+flashcardFrame.hardDifficultyButtonYOffset = 20
+-- Navigate back to main menu button
+flashcardFrame.navigateBackToMainMenuButtonName = "NavigateBackToMainMenuFromFlashcardFrameButton"
+flashcardFrame.navigateBackToMainMenuButtonText = "Main Menu"
+flashcardFrame.navigateBackToMainMenuButtonAnchor = ANCHOR_POINTS.BOTTOMRIGHT
+flashcardFrame.navigateBackToMainMenuButtonXOffset = -20
+flashcardFrame.navigateBackToMainMenuButtonYOffset = 20
+flashcardFrame.navigateBackToMainMenuButtonSound = SOUNDKIT.IG_CHARACTER_INFO_CLOSE
 
 -- Deck settings frame
 local deckSettingsFrame = {}
@@ -1244,6 +1286,90 @@ local function configureDeckSettingsFrame()
 	end)
 end
 
+local function configureFlashcardFrame()
+	flashcardFrame.Frame:SetSize(flashcardFrame.width, flashcardFrame.height)
+
+	-- Add text to display question
+	flashcardFrame.displayedText = flashcardFrame.Frame:CreateFontString(nil, TEXT_CONSTANTS.OVERLAY, TEXT_CONSTANTS.GAME_FONT_HIGHLIGHT)
+	flashcardFrame.displayedText:SetPoint(ANCHOR_POINTS.TOPLEFT, flashcardFrame.Frame, ANCHOR_POINTS.TOPLEFT, flashcardFrame.textTopLeftAnchorXOffset, flashcardFrame.textTopLeftAnchorYOffset)
+	flashcardFrame.displayedText:SetPoint(ANCHOR_POINTS.BOTTOMRIGHT, flashcardFrame.Frame, ANCHOR_POINTS.BOTTOMRIGHT, flashcardFrame.textBottomRightAnchorXOffset, flashcardFrame.textBottomRightAnchorYOffset)
+	flashcardFrame.displayedText:SetNonSpaceWrap(true)
+
+	function flashcardFrame.showNextCard()
+		local currentCardID = ProductiveWoW_getCurrentCardID()
+		local currentDeckName = ProductiveWoW_getCurrentDeckName()
+		if currentCardID ~= nil then
+			local currentQuestion = ProductiveWoW_getCardQuestion(currentDeckName, currentCardID)
+			flashcardFrame.displayedText:SetText(currentQuestion)
+			ProductiveWoW_onViewedCard(currentCardID)
+		end
+	end
+
+	-- Show answer button
+	function flashcardFrame.showAnswerButtonOnClick()
+		local currentCardID = ProductiveWoW_getCurrentCardID()
+		local currentDeckName = ProductiveWoW_getCurrentDeckName()
+		if currentCardID ~= nil then
+			local currentAnswer = ProductiveWoW_getCardAnswer(currentDeckName, currentCardID)
+			flashcardFrame.displayedText:SetText(currentAnswer)
+			PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+		end
+		flashcardFrame.easyDifficultyButton:Show()
+		flashcardFrame.mediumDifficultyButton:Show()
+		flashcardFrame.hardDifficultyButton:Show()
+		flashcardFrame.showAnswerButton:Hide()
+	end
+	flashcardFrame.showAnswerButton = createButton(flashcardFrame.showAnswerButtonName, flashcardFrame.Frame, flashcardFrame.showAnswerButtonText, flashcardFrame.showAnswerButtonAnchor, flashcardFrame.showAnswerButtonXOffset, flashcardFrame.showAnswerButtonYOffset, flashcardFrame.showAnswerButtonOnClick)
+
+	-- Next question
+	function flashcardFrame.nextQuestion(self)
+		self:Hide()
+		ProductiveWoW_drawRandomNextCard()
+		flashcardFrame.showNextCard()
+		flashcardFrame.showAnswerButton:Show()
+		flashcardFrame.easyDifficultyButton:Hide()
+		flashcardFrame.mediumDifficultyButton:Hide()
+		flashcardFrame.hardDifficultyButton:Hide()
+		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+	end
+
+	-- Easy difficulty button
+	function flashcardFrame.easyDifficultyButtonOnClick(self)
+		local currentCardID = ProductiveWoW_getCurrentCardID()
+		ProductiveWoW_cardEasyDifficultyChosen(currentCardID)
+		flashcardFrame.nextQuestion(self)
+	end
+	flashcardFrame.easyDifficultyButton = createButton(flashcardFrame.easyDifficultyButtonName, flashcardFrame.Frame, flashcardFrame.easyDifficultyButtonText, flashcardFrame.easyDifficultyButtonAnchor, flashcardFrame.easyDifficultyButtonXOffset, flashcardFrame.easyDifficultyButtonYOffset, flashcardFrame.easyDifficultyButtonOnClick)
+	flashcardFrame.easyDifficultyButton:Hide()
+
+	-- Medium difficulty button
+	function flashcardFrame.mediumDifficultyButtonOnClick(self)
+		local currentCardID = ProductiveWoW_getCurrentCardID()
+		ProductiveWoW_cardMediumDifficultyChosen(currentCardID)
+		flashcardFrame.nextQuestion(self)
+	end
+	flashcardFrame.mediumDifficultyButton = createButton(flashcardFrame.mediumDifficultyButtonName, flashcardFrame.Frame, flashcardFrame.mediumDifficultyButtonText, flashcardFrame.mediumDifficultyButtonAnchor, flashcardFrame.mediumDifficultyButtonXOffset, flashcardFrame.mediumDifficultyButtonYOffset, flashcardFrame.mediumDifficultyButtonOnClick)
+	flashcardFrame.mediumDifficultyButton:Hide()
+
+	-- Hard difficulty button
+	function flashcardFrame.hardDifficultyButtonOnClick(self)
+		local currentCardID = ProductiveWoW_getCurrentCardID()
+		ProductiveWoW_cardHardDifficultyChosen(currentCardID)
+		flashcardFrame.nextQuestion(self)
+	end
+	flashcardFrame.hardDifficultyButton = createButton(flashcardFrame.hardDifficultyButtonName, flashcardFrame.Frame, flashcardFrame.hardDifficultyButtonText, flashcardFrame.hardDifficultyButtonAnchor, flashcardFrame.hardDifficultyButtonXOffset, flashcardFrame.hardDifficultyButtonYOffset, flashcardFrame.hardDifficultyButtonOnClick)
+	flashcardFrame.hardDifficultyButton:Hide()
+
+	-- Back to main menu from flashcard frame button
+	flashcardFrame.navigateBackToMainMenuButton = createNavigationButton(flashcardFrame.navigateBackToMainMenuButtonName, flashcardFrame.Frame, flashcardFrame.navigateBackToMainMenuButtonText, flashcardFrame.navigateBackToMainMenuButtonAnchor, flashcardFrame.navigateBackToMainMenuButtonXOffset, flashcardFrame.navigateBackToMainMenuButtonYOffset, mainMenu.Frame, flashcardFrame.navigateBackToMainMenuButtonSound)
+
+	-- OnShow script to refresh question
+	flashcardFrame.Frame:SetScript(EVENTS.ON_SHOW, function(self)
+		ProductiveWoW_beginQuiz()
+		flashcardFrame.showNextCard()
+	end)
+end
+
 
 --------------------------------------------------------------------------------------------------------------------------------
 
@@ -1263,92 +1389,6 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 	configureAddCardFrame()
 	configureEditCardFrame()	
 	configureDeckSettingsFrame()
-	
-
-	-- FLASHCARD FRAME
-	flashcardFrame.Frame:SetSize(commonFrameAttributes.basicFrameWidth + 100, commonFrameAttributes.basicFrameHeight + 100)
-	-- Add text to display question
-	flashcardFrame.displayedText = flashcardFrame.Frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	flashcardFrame.displayedText:SetPoint("TOPLEFT", flashcardFrame.Frame, "TOPLEFT", 15, -10)
-	flashcardFrame.displayedText:SetPoint("BOTTOMRIGHT", flashcardFrame.Frame, "BOTTOMRIGHT", -15, 20)
-	flashcardFrame.displayedText:SetNonSpaceWrap(true)
-
-	local function showNextCard()
-		local currentCardID = ProductiveWoW_getCurrentCardID()
-		if currentCardID ~= nil then
-			local currentQuestion = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(currentCardID)["question"]
-			flashcardFrame.displayedText:SetText(currentQuestion)
-			ProductiveWoW_onViewedCard(currentCardID)
-		end
-	end
-
-	-- Show answer button
-	local function showAnswerButtonOnClick()
-		local currentCardID = ProductiveWoW_getCurrentCardID()
-		if currentCardID ~= nil then
-			local currentAnswer = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(currentCardID)["answer"]
-			flashcardFrame.displayedText:SetText(currentAnswer)
-			PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
-		end
-		flashcardFrame.easyDifficultyButton:Show()
-		flashcardFrame.mediumDifficultyButton:Show()
-		flashcardFrame.hardDifficultyButton:Show()
-		flashcardFrame.showAnswerButton:Hide()
-	end
-	flashcardFrame.showAnswerButton = createButton("ShowAnswerButton", flashcardFrame.Frame, "Show", "BOTTOMLEFT", 20, 20, showAnswerButtonOnClick)
-
-	-- Next question
-	local function nextQuestion(self)
-		self:Hide()
-		ProductiveWoW_drawRandomNextCard()
-		showNextCard()
-		flashcardFrame.showAnswerButton:Show()
-		flashcardFrame.easyDifficultyButton:Hide()
-		flashcardFrame.mediumDifficultyButton:Hide()
-		flashcardFrame.hardDifficultyButton:Hide()
-		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
-	end
-
-	-- Easy difficulty button
-	local function easyDifficultyButtonOnClick(self)
-		local currentCardID = ProductiveWoW_getCurrentCardID()
-		ProductiveWoW_cardEasyDifficultyChosen(currentCardID)
-		-- print("DEBUG: Number of times Easy was pressed for this card: " .. ProductiveWoW_getCardByIDForCurrentlySelectedDeck(currentCardID)["number of times easy"])
-		nextQuestion(self)
-	end
-	flashcardFrame.easyDifficultyButton = createButton("EasyDifficultyButton", flashcardFrame.Frame, "Easy", "BOTTOMLEFT", 20, 20, easyDifficultyButtonOnClick)
-	flashcardFrame.easyDifficultyButton:Hide()
-
-	-- Medium difficulty button
-	local function mediumDifficultyButtonOnClick(self)
-		local currentCardID = ProductiveWoW_getCurrentCardID()
-		ProductiveWoW_cardMediumDifficultyChosen(currentCardID)
-		-- print("DEBUG: Number of times Medium was pressed for this card: " .. ProductiveWoW_getCardByIDForCurrentlySelectedDeck(currentCardID)["number of times medium"])
-		nextQuestion(self)
-	end
-	flashcardFrame.mediumDifficultyButton = createButton("MediumDifficultyButton", flashcardFrame.Frame, "Medium", "BOTTOMLEFT", 120, 20, mediumDifficultyButtonOnClick)
-	flashcardFrame.mediumDifficultyButton:Hide()
-
-	-- Hard difficulty button
-	local function hardDifficultyButtonOnClick(self)
-		local currentCardID = ProductiveWoW_getCurrentCardID()
-		ProductiveWoW_cardHardDifficultyChosen(currentCardID)
-		-- print("DEBUG: Number of times Hard was pressed for this card: " .. ProductiveWoW_getCardByIDForCurrentlySelectedDeck(currentCardID)["number of times hard"])
-		nextQuestion(self)
-	end
-	flashcardFrame.hardDifficultyButton = createButton("HardDifficultyButton", flashcardFrame.Frame, "Hard", "BOTTOMLEFT", 220, 20, hardDifficultyButtonOnClick)
-	flashcardFrame.hardDifficultyButton:Hide()
-
-	
-	flashcardFrame.nextQuestionButton = createButton("NextQuestionButton", flashcardFrame.Frame, "Next", "BOTTOM", 0, 20, nextQuestionButtonOnClick)
-	flashcardFrame.nextQuestionButton:Hide()
-
-	-- Back to main menu from flashcard frame button
-	flashcardFrame.navigateBackToMainMenuFromFlashcardFrameButton = createNavigationButton("NavigateBackToMainMenuFromFlashcardFrameButton", flashcardFrame.Frame, "Main Menu", "BOTTOMRIGHT", -20, 20, mainMenu.Frame, SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
-
-	-- OnShow script to refresh question
-	flashcardFrame.Frame:SetScript("OnShow", function(self)
-		ProductiveWoW_beginQuiz()
-		showNextCard()
-	end)
+	configureFlashcardFrame()
+		
 end)
