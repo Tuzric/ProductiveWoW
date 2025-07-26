@@ -1,4 +1,4 @@
--- v1.2
+-- v1.3
 
 -- DEV AND DEBUG ONLY --
 local resetSavedVariables = false -- Reset ProductiveWoWData and ProductiveWoWSavedSettings
@@ -9,7 +9,7 @@ local runUnitTests = false
 -- GLOBALS --
 --------------------------------------------------------------------------------------------------------------------------------
 ProductiveWoW_ADDON_NAME = "ProductiveWoW"
-ProductiveWoW_ADDON_VERSION = "v1.2"
+ProductiveWoW_ADDON_VERSION = "v1.3"
 
 
 -- CONSTANTS --
@@ -156,9 +156,19 @@ function ProductiveWoW_getCardQuestion(deckName, cardId)
 	return ProductiveWoW_getCardByID(deckName, cardId)[QUESTION_KEY]
 end
 
+-- Get a question given a card table
+function ProductiveWoW_getQuestionFromCardTable(cardTable)
+	return cardTable[QUESTION_KEY]
+end
+
 -- Get card's answer
 function ProductiveWoW_getCardAnswer(deckName, cardId)
 	return ProductiveWoW_getCardByID(deckName, cardId)[ANSWER_KEY]
+end
+
+-- Get a answer given a card table
+function ProductiveWoW_getAnswerFromCardTable(cardTable)
+	return cardTable[ANSWER_KEY]
 end
 
 -- Get card date last played
@@ -341,6 +351,18 @@ local function updateDeckValues()
 	end
 end
 
+function ProductiveWoW_getDeckCardsContainingSubstringInQuestionOrAnswer(deckName, substring)
+	local cards = ProductiveWoW_getDeckCards(deckName)
+	local matches = {}
+	for cardId, cardTable in pairs(cards) do
+		local question = ProductiveWoW_getQuestionFromCardTable(cardTable)
+		local answer = ProductiveWoW_getAnswerFromCardTable(cardTable)
+		if string.find(string.lower(question), string.lower(substring)) or string.find(string.lower(answer), string.lower(substring)) then
+			matches[cardId] = cardTable
+		end
+	end
+	return matches
+end
 
 -- CARD FUNCTIONS --
 --------------------------------------------------------------------------------------------------------------------------------
@@ -516,7 +538,7 @@ function ProductiveWoW_drawRandomNextCard()
 	if numCards >= 1 then
 		local randomIndex = math.random(1, numCards)
 		currentCardID = ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs[randomIndex]
-		table.remove(ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs, random_index)
+		table.remove(ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs, randomIndex)
 		table.remove(ProductiveWoW_getDeckListOfRemainingCardsToday(currentDeckName), randomIndex)
 	else
 		ProductiveWoW_setDeckCompletedForToday(ProductiveWoW_getCurrentDeckName())

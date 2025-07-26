@@ -1,4 +1,4 @@
--- v1.2
+-- v1.3
 
 -- INITIALIZE VARIABLES
 --------------------------------------------------------------------------------------------------------------------------------
@@ -34,6 +34,9 @@ TEXT_CONSTANTS.OVERLAY = "OVERLAY"
 TEXT_CONSTANTS.GAME_FONT_NORMAL = "GameFontNormal"
 TEXT_CONSTANTS.GAME_FONT_HIGHLIGHT = "GameFontHighlight"
 TEXT_CONSTANTS.JUSTIFY_LEFT = "LEFT"
+-- Textures
+local TEXTURE_TEMPLATES = {}
+TEXTURE_TEMPLATES.ARTWORK = "ARTWORK"
 -- Colours
 local COLOURS = {}
 COLOURS.GREY = {0.5, 0.5, 0.5}
@@ -190,7 +193,7 @@ modifyDeckFrame.navigateToAddCardButtonName = "NavigateToAddCardFromModifyDeckBu
 modifyDeckFrame.navigateToAddCardButtonText = "Add Card"
 modifyDeckFrame.navigateToAddCardButtonAnchor = ANCHOR_POINTS.TOPRIGHT
 modifyDeckFrame.navigateToAddCardButtonXOffset = -20
-modifyDeckFrame.navigateToAddCardButtonYOffset = -35
+modifyDeckFrame.navigateToAddCardButtonYOffset = -33
 -- Navigate to main menu button
 modifyDeckFrame.navigateToMainMenuButtonName = "NavigateToMainMenuFromModifyDeckButton"
 modifyDeckFrame.navigateToMainMenuButtonText = "Back"
@@ -216,6 +219,8 @@ modifyDeckFrame.pages = {}
 modifyDeckFrame.currentPageIndex = 1
 modifyDeckFrame.maximumPages = 1
 modifyDeckFrame.numberOfRowsPerPage = 100
+modifyDeckFrame.questionToCardIdMapping = {}
+modifyDeckFrame.sortedQuestions = {}
 modifyDeckFrame.rows = {}
 modifyDeckFrame.currentNumberOfRowsOnPage = 0 -- Used to keep track when this reaches 0 when a user deletes enough cards, to auto-switch to the previous page
 modifyDeckFrame.rowWidthAmountSmallerThanFrameWidth = 45 -- The width of the row is determine by the width of the frame minus this number
@@ -249,8 +254,10 @@ modifyDeckFrame.selectRow = nil -- Function to select a single row
 modifyDeckFrame.unselectRow = nil -- Function to unselect a single row
 modifyDeckFrame.populateRows = nil -- Function to populate rows of cards for the current page
 modifyDeckFrame.createPages = nil -- Function to create the pages of cards
+modifyDeckFrame.getPage = nil -- Function to get a page by its index
 modifyDeckFrame.getCurrentPage = nil -- Function to return current page table
 modifyDeckFrame.refreshListOfCards = nil -- Function to refresh the list of cards shown
+modifyDeckFrame.cancelSearch = nil -- Function to cancel search
 modifyDeckFrame.listOfCardsFrameTopLeftAnchorXOffset = 10
 modifyDeckFrame.listOfCardsFrameTopLeftAnchorYOffset = -90
 modifyDeckFrame.listOfCardsFrameBottomRightAnchorXOffset = -35
@@ -277,6 +284,31 @@ modifyDeckFrame.previousPageButtonWidth = 30
 modifyDeckFrame.previousPageButtonHeight = 30
 modifyDeckFrame.previousPageButtonIcon = "Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Up"
 modifyDeckFrame.previousPageButtonClickedIcon = "Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Down"
+-- Card search bar textbox
+modifyDeckFrame.cardSearchBarName = "CardSearchBarTextBox"
+modifyDeckFrame.cardSearchBarWidth = modifyDeckFrame.width - 300
+modifyDeckFrame.cardSearchBarHeight = 20
+modifyDeckFrame.cardSearchBarAnchor = ANCHOR_POINTS.TOPLEFT
+modifyDeckFrame.cardSearchBarXOffset = 80
+modifyDeckFrame.cardSearchBarYOffset = -38
+modifyDeckFrame.cardSearchBarGreyHintText = "Search..."
+-- Card search button
+modifyDeckFrame.searchActive = false
+modifyDeckFrame.searchResultsCardIds = {}
+modifyDeckFrame.cardSearchButtonName = "CardSearchButton"
+modifyDeckFrame.cardSearchButtonText = "Search"
+modifyDeckFrame.cardSearchButtonAnchor = ANCHOR_POINTS.TOPLEFT
+modifyDeckFrame.cardSearchButtonXOffset = modifyDeckFrame.cardSearchBarXOffset + modifyDeckFrame.cardSearchBarWidth + 1
+modifyDeckFrame.cardSearchButtonYOffset = -33
+modifyDeckFrame.cardSearchButtonOnClick = nil -- Function to search for keywords in card question/answer
+modifyDeckFrame.showSearchResults = nil -- Function to display the search results
+-- Cancel search button
+modifyDeckFrame.cancelSearchButtonName = "CancelSearchButton"
+modifyDeckFrame.cancelSearchButtonText = "Cancel Search"
+modifyDeckFrame.cancelSearchButtonAnchor = ANCHOR_POINTS.BOTTOM
+modifyDeckFrame.cancelSearchButtonXOffset = 0
+modifyDeckFrame.cancelSearchButtonYOffset = 20
+modifyDeckFrame.cancelSearchButtonOnClick = nil -- Function
 
 -- Confirmation box that appears when you attempt to delete multiple selected cards
 local multipleCardsDeletionConfirmationFrame = {}
@@ -854,10 +886,7 @@ local function configureModifyDeckFrame()
 		local prevPageIndex = modifyDeckFrame.currentPageIndex - 1
 		if prevPageIndex >= 1 then
 			modifyDeckFrame.currentPageIndex = modifyDeckFrame.currentPageIndex - 1
-			modifyDeckFrame.createPages()
-			modifyDeckFrame.populateRows()
-			modifyDeckFrame.currentPageText:SetText(modifyDeckFrame.currentPageIndex .. " of " .. modifyDeckFrame.maximumPages)
-			modifyDeckFrame.listOfCardsFrame:SetVerticalScroll(0)
+			modifyDeckFrame.refreshListOfCards()
 		end
 		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
 	end
@@ -879,6 +908,74 @@ local function configureModifyDeckFrame()
 	-- Column headers
 	modifyDeckFrame.questionColumnHeader = createText(ANCHOR_POINTS.TOPLEFT, modifyDeckFrame.Frame, ANCHOR_POINTS.TOPLEFT, modifyDeckFrame.questionColumnHeaderXOffset, modifyDeckFrame.questionColumnHeaderYOffset, modifyDeckFrame.questionColumnHeaderText)
 	modifyDeckFrame.answerColumnHeader = createText(ANCHOR_POINTS.TOPLEFT, modifyDeckFrame.Frame, ANCHOR_POINTS.TOPRIGHT, modifyDeckFrame.answerColumnHeaderXOffset, modifyDeckFrame.answerColumnHeaderYOffset, modifyDeckFrame.answerColumnHeaderText)
+
+	-- Card search bar
+	modifyDeckFrame.cardSearchBar = createTextBox(modifyDeckFrame.cardSearchBarName, modifyDeckFrame.Frame, modifyDeckFrame.cardSearchBarWidth, modifyDeckFrame.cardSearchBarHeight, modifyDeckFrame.cardSearchBarAnchor, modifyDeckFrame.cardSearchBarXOffset, modifyDeckFrame.cardSearchBarYOffset, modifyDeckFrame.cardSearchBarGreyHintText)
+
+	-- Card search button
+	function modifyDeckFrame.cardSearchButtonOnClick()
+		local currentDeckName = ProductiveWoW_getCurrentDeckName()
+		local searchSubstring = modifyDeckFrame.cardSearchBar:GetText()
+		if not ProductiveWoW_stringContainsOnlyWhitespace(searchSubstring) then
+			if searchSubstring ~= modifyDeckFrame.cardSearchBarGreyHintText then
+				local cardMatches = ProductiveWoW_getDeckCardsContainingSubstringInQuestionOrAnswer(currentDeckName, searchSubstring)
+				-- Sort it alphabetically
+				local questionsToCardIdsMapping = {}
+				local sortedQuestions = {}
+				for cardId, cardTable in pairs(cardMatches) do
+					local question = ProductiveWoW_getQuestionFromCardTable(cardTable)
+					questionsToCardIdsMapping[question] = cardId
+					table.insert(sortedQuestions, question)
+				end
+				table.sort(sortedQuestions)
+				modifyDeckFrame.searchResultsCardIds = {}
+				for i, question in ipairs(sortedQuestions) do
+					local cardId = questionsToCardIdsMapping[question]
+					table.insert(modifyDeckFrame.searchResultsCardIds, cardId)
+				end
+				modifyDeckFrame.showSearchResults(modifyDeckFrame.searchResultsCardIds)
+				modifyDeckFrame.searchActive = true
+			end
+		else
+			clearTextBox(modifyDeckFrame.cardSearchBar)
+		end
+		modifyDeckFrame.cardSearchBar:ClearFocus()
+		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+	end
+	modifyDeckFrame.cardSearchButton = createButton(modifyDeckFrame.cardSearchButtonName, modifyDeckFrame.Frame, modifyDeckFrame.cardSearchButtonText, modifyDeckFrame.cardSearchButtonAnchor, modifyDeckFrame.cardSearchButtonXOffset, modifyDeckFrame.cardSearchButtonYOffset, modifyDeckFrame.cardSearchButtonOnClick)
+
+	-- Cancel search
+	function modifyDeckFrame.cancelSearch()
+		modifyDeckFrame.previousPageButton:Show()
+		modifyDeckFrame.currentPageText:Show()
+		modifyDeckFrame.nextPageButton:Show()
+		modifyDeckFrame.cancelSearchButton:Hide()
+		clearTextBox(modifyDeckFrame.cardSearchBar)
+		modifyDeckFrame.searchResultsCardIds = {}
+		modifyDeckFrame.searchActive = false
+	end
+
+	-- Cancel search button
+	function modifyDeckFrame.cancelSearchButtonOnClick()
+		modifyDeckFrame.cancelSearch()
+		modifyDeckFrame.createPages()
+		modifyDeckFrame.refreshListOfCards()
+		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+	end
+	modifyDeckFrame.cancelSearchButton = createButton(modifyDeckFrame.cancelSearchButtonName, modifyDeckFrame.Frame, modifyDeckFrame.cancelSearchButtonText, modifyDeckFrame.cancelSearchButtonAnchor, modifyDeckFrame.cancelSearchButtonXOffset, modifyDeckFrame.cancelSearchButtonYOffset, modifyDeckFrame.cancelSearchButtonOnClick)
+	modifyDeckFrame.cancelSearchButton:Hide()
+
+	function modifyDeckFrame.showSearchResults(searchResults)
+		modifyDeckFrame.currentPageIndex = 1
+		modifyDeckFrame.maximumPages = 1
+		modifyDeckFrame.listOfCardsFrame:SetVerticalScroll(0)
+		modifyDeckFrame.previousPageButton:Hide()
+		modifyDeckFrame.currentPageText:Hide()
+		modifyDeckFrame.nextPageButton:Hide()
+		modifyDeckFrame.cancelSearchButton:Show()
+		modifyDeckFrame.unselectAllRows()
+		modifyDeckFrame.populateRows(modifyDeckFrame.currentPageIndex, searchResults)
+	end
 
 	function modifyDeckFrame.unselectAllRows()
 		for i, row in ipairs(modifyDeckFrame.rows) do
@@ -935,14 +1032,21 @@ local function configureModifyDeckFrame()
 		end
 		ProductiveWoW_deleteCardByID(currentDeckName, cardId)
 		print(modifyDeckFrame.deleteCardButtonOnClickSuccessfulDeletionMessage .. cardQuestion)
-		modifyDeckFrame.currentNumberOfRowsOnPage = modifyDeckFrame.currentNumberOfRowsOnPage - 1
-		if modifyDeckFrame.currentNumberOfRowsOnPage == 0 and ProductiveWoW_tableLength(modifyDeckFrame.pages) >= 2 then
-			-- If 2 or more pages, go to previous page
-			modifyDeckFrame.previousPageButtonOnClick()
+		if modifyDeckFrame.searchActive == false then
+			modifyDeckFrame.currentNumberOfRowsOnPage = modifyDeckFrame.currentNumberOfRowsOnPage - 1
+			if modifyDeckFrame.currentNumberOfRowsOnPage == 0 and ProductiveWoW_tableLength(modifyDeckFrame.pages) >= 2 then
+				-- If 2 or more pages, go to previous page
+				modifyDeckFrame.previousPageButtonOnClick()
+				modifyDeckFrame.unselectAllRows()
+			else
+				-- If there are still cards remaining on the page, then re-populate the rows
+				modifyDeckFrame.createPages()
+				modifyDeckFrame.refreshListOfCards()
+			end
+		elseif modifyDeckFrame.searchActive == true then
+			modifyDeckFrame.searchResultsCardIds = ProductiveWoW_removeFromArrayMaintainOrdering(modifyDeckFrame.searchResultsCardIds, cardId)
 			modifyDeckFrame.unselectAllRows()
-		else
-			-- If there are still cards remaining on the page, then re-populate the rows
-			modifyDeckFrame.refreshListOfCards()
+			modifyDeckFrame.populateRows(modifyDeckFrame.currentPageIndex, modifyDeckFrame.searchResultsCardIds)
 		end
 	end
 
@@ -1021,9 +1125,21 @@ local function configureModifyDeckFrame()
 		modifyDeckFrame.pages = {}
 		local cards = ProductiveWoW_getDeckCards(ProductiveWoW_getCurrentDeckName())
 		local cardCounter = 0
+		-- Page contains list of cardIds sorted alphabetically
 		local currentPage = {}
-		for cardId, card in pairs(cards) do
-			currentPage[cardId] = card
+		-- Sort cards alphabetically by question. First we get a reverse mapping of questions to cardIds, sort the questions, and use the questions as keys to lookup the cardId
+		modifyDeckFrame.questionToCardIdMapping = {}
+		modifyDeckFrame.sortedQuestions = {}
+		for cardId, cardTable in pairs(cards) do
+			local question = ProductiveWoW_getQuestionFromCardTable(cardTable)
+			question = string.lower(question)
+			modifyDeckFrame.questionToCardIdMapping[question] = cardId
+			table.insert(modifyDeckFrame.sortedQuestions, question)
+		end
+		table.sort(modifyDeckFrame.sortedQuestions)
+		for i, question in ipairs(modifyDeckFrame.sortedQuestions) do
+			local cardId = modifyDeckFrame.questionToCardIdMapping[question]
+			table.insert(currentPage, cardId)
 			cardCounter = cardCounter + 1
 			if cardCounter % modifyDeckFrame.numberOfRowsPerPage == 0 then
 				table.insert(modifyDeckFrame.pages, ProductiveWoW_tableShallowCopy(currentPage))
@@ -1037,12 +1153,17 @@ local function configureModifyDeckFrame()
 		end
 		-- If there are no cards, there still needs to be 1 empty page
 		if ProductiveWoW_tableLength(modifyDeckFrame.pages) == 0 then
-			modifyDeckFramepages = {{}} -- 1 empty page
+			modifyDeckFrame.pages = {{}} -- 1 empty page
 		end
 		modifyDeckFrame.maximumPages = ProductiveWoW_tableLength(modifyDeckFrame.pages)
 		if modifyDeckFrame.maximumPages == 0 then
 			modifyDeckFrame.maximumPages = 1
 		end
+	end
+
+	-- Get page by index
+	function modifyDeckFrame.getPage(index)
+		return modifyDeckFrame.pages[index]
 	end
 
 	-- Get current page
@@ -1053,14 +1174,20 @@ local function configureModifyDeckFrame()
 	-- Populate rows. This function creates a Frame for each row, since we can't delete frames after they're created, everytime it's repopulated when you switch a deck,
 	-- we will need to reuse the existing row Frames but just changing their text. New row Frames are only created when we have exhausted 
 	-- all the existing row Frames. If we switch from Deck A which has 5 rows to Deck B which has 3 rows, we need to set the text of the 2 extra rows to blank and hide them
-	function modifyDeckFrame.populateRows()
-		local cards = modifyDeckFrame.getCurrentPage()
+	function modifyDeckFrame.populateRows(pageIndex, searchResultsCardIds)
+		local currentPageCardIds = {}
+		-- Search results is an optional argument, but if provided the keys need to be the list of Card IDs returned from the search
+		if searchResultsCardIds ~= nil then
+			currentPageCardIds = searchResultsCardIds
+		else
+			currentPageCardIds = modifyDeckFrame.getPage(pageIndex)
+		end
 		local currentDeckName = ProductiveWoW_getCurrentDeckName()
 		local tableIndex = 1 -- Need to increment index manually since cardId may not be continuous due to deletion of cards
-		modifyDeckFrame.currentNumberOfRowsOnPage = 0
-		if cards ~= nil then
-			modifyDeckFrame.currentNumberOfRowsOnPage = ProductiveWoW_tableLength(cards)
-			for cardId, cardContent in pairs(cards) do
+		modifyDeckFrame.currentNumberOfRowsOnPage = 0		
+		if currentPageCardIds ~= nil then
+			modifyDeckFrame.currentNumberOfRowsOnPage = ProductiveWoW_tableLength(currentPageCardIds)			
+			for i, cardId in ipairs(currentPageCardIds) do
 				-- Get existing row
 				local row = modifyDeckFrame.rows[tableIndex]
 				if row == nil then -- if this row index does not already exist, create new row
@@ -1091,14 +1218,15 @@ local function configureModifyDeckFrame()
 	function modifyDeckFrame.refreshListOfCards()
 		modifyDeckFrame.listOfCardsFrame:SetVerticalScroll(0)
 		modifyDeckFrame.unselectAllRows()
-		modifyDeckFrame.createPages()
-		modifyDeckFrame.populateRows()
+		modifyDeckFrame.populateRows(modifyDeckFrame.currentPageIndex)
 		modifyDeckFrame.currentPageText:SetText(modifyDeckFrame.currentPageIndex .. " of " .. modifyDeckFrame.maximumPages)
 	end
 
 	-- Re-populate rows when frame is shown
 	modifyDeckFrame.Frame:SetScript(EVENTS.ON_SHOW, function(self)
 		modifyDeckFrame.currentPageIndex = 1
+		modifyDeckFrame.cancelSearch()
+		modifyDeckFrame.createPages()
 		modifyDeckFrame.refreshListOfCards()
 	end)
 

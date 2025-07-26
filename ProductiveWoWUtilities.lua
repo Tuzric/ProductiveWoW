@@ -1,4 +1,4 @@
--- v1.2
+-- v1.3
 
 -- TABLE FUNCTIONS --
 --------------------------------------------------------------------------------------------------------------------------------
@@ -63,6 +63,28 @@ function ProductiveWoW_removeByValue(value, tbl)
 	end
 end
 
+-- Remove a value from an array table while maintaining original ordering
+function ProductiveWoW_removeFromArrayMaintainOrdering(arrayTable, valueToRemove)
+	local tempTable = {}
+	for i, val in ipairs(arrayTable) do
+		if val ~= valueToRemove then
+			table.insert(tempTable, val)
+		end
+	end
+	return tempTable
+end
+
+-- Remove an index from an array table while maintaining original ordering
+function ProductiveWoW_removeFromArrayByIndexMaintainOrdering(arrayTable, indexToRemove)
+	local tempTable = {}
+	for i, val in ipairs(arrayTable) do
+		if i ~= indexToRemove then
+			table.insert(tempTable, val)
+		end
+	end
+	return tempTable
+end
+
 -- Shallow copy of a table, does not copy nested tables
 function ProductiveWoW_tableShallowCopy(tbl)
 	local copy = {}
@@ -99,11 +121,12 @@ function ProductiveWoW_getRandomSubsetOfTable(tbl, size)
 		while size ~= 0 do
 			local randomIndex = math.random(1, size)
 			table.insert(subset, tempTable[randomIndex])
-			table.remove(tempTable, randomIndex)
+			tempTable = ProductiveWoW_removeFromArrayByIndexMaintainOrdering(tempTable, randomIndex)
 			size = size - 1
 		end
 		return subset
 	end
+	return tbl
 end
 
 -- Check if an array-type table contains the exact same elements as another table regardless of ordering
@@ -129,7 +152,6 @@ function ProductiveWoW_arrayTablesContainSameElements(arrayTable1, arrayTable2)
 		return false
 	end
 end
-
 
 -- STRING FUNCTIONS --
 --------------------------------------------------------------------------------------------------------------------------------
