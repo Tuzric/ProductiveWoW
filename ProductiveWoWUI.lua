@@ -249,6 +249,7 @@ modifyDeckFrame.editCardButtonOnClickCardInBulkImportFileMessage = "Can't edit t
 modifyDeckFrame.deleteCardButtonOnClickCardInBulkImportFileMessage = "\" could not be deleted since it exists in ProductiveWoWDecks.lua and will be re-added on the next login. Remove it from that file, re-log or type in /reload (important to do this otherwise you'll get the same error), then delete it through the UI."
 modifyDeckFrame.deleteCardButtonOnClickSuccessfulDeletionMessage = "Successfully deleted card: "
 modifyDeckFrame.deleteCardButtonOnClick = nil -- Function
+modifyDeckFrame.cardStatsButtonOnClick = nil -- Function
 modifyDeckFrame.unselectAllRows = nil -- Function to unselect all rows
 modifyDeckFrame.selectRow = nil -- Function to select a single row
 modifyDeckFrame.unselectRow = nil -- Function to unselect a single row
@@ -265,6 +266,7 @@ modifyDeckFrame.listOfCardsFrameBottomRightAnchorYOffset = 60
 modifyDeckFrame.listOfCardsFrameContentName = "ListOfCards"
 modifyDeckFrame.rowRightClickMenuEditCardText = "Edit Card"
 modifyDeckFrame.rowRightClickMenuDeleteCardText = "Delete Card"
+modifyDeckFrame.rowRightClickMenuCardStatsText = "Card Stats"
 modifyDeckFrame.rowRightClickMenuMultipleCardsDeletionText = "Delete All Selected Cards"
 -- Next page button
 modifyDeckFrame.nextPageButtonOnClick = nil -- Function to go to the next page
@@ -513,6 +515,64 @@ deckSettingsFrame.maxDailyCardsCannotBeZeroOrLessMessage = "Max daily cards cann
 deckSettingsFrame.noChangesMadeMessage = "No changes were made so nothing was saved."
 deckSettingsFrame.settingsSavedMessage = "Settings saved."
 
+-- Card stats frame
+local cardStatsFrame = {}
+cardStatsFrame.cardId = 0
+cardStatsFrame.frameName = "CardStatsFrame"
+cardStatsFrame.frameTitle = "Card Stats"
+cardStatsFrame.width = commonFrameAttributes.basicFrameWidth + 100
+cardStatsFrame.height = commonFrameAttributes.basicFrameHeight + 50
+-- Navigate back to modify deck frame button
+cardStatsFrame.navigateBackToModifyDeckFrameButtonName = "NavigateBackToModifyDeckFromCardStats"
+cardStatsFrame.navigateBackToModifyDeckFrameButtonText = "Back"
+cardStatsFrame.navigateBackToModifyDeckFrameButtonAnchor = ANCHOR_POINTS.BOTTOMLEFT
+cardStatsFrame.navigateBackToModifyDeckFrameButtonXOffset = 20
+cardStatsFrame.navigateBackToModifyDeckFrameButtonYOffset = 20
+cardStatsFrame.navigateBackToModifyDeckFrameButtonSound = SOUNDKIT.IG_CHARACTER_INFO_CLOSE
+-- Navigate back to main menu button
+cardStatsFrame.navigateBackToMainMenuButtonName = "NavigateBackToMainMenuFromCardStats"
+cardStatsFrame.navigateBackToMainMenuButtonText = "Main Menu"
+cardStatsFrame.navigateBackToMainMenuButtonAnchor = ANCHOR_POINTS.BOTTOMRIGHT
+cardStatsFrame.navigateBackToMainMenuButtonXOffset = -20
+cardStatsFrame.navigateBackToMainMenuButtonYOffset = 20
+cardStatsFrame.navigateBackToMainMenuButtonSound = SOUNDKIT.IG_CHARACTER_INFO_CLOSE
+-- Difficulty text
+cardStatsFrame.difficultyTextAnchor = ANCHOR_POINTS.TOPLEFT
+cardStatsFrame.difficultyTextParentAnchor = ANCHOR_POINTS.TOPLEFT
+cardStatsFrame.difficultyTextXOffset = 20
+cardStatsFrame.difficultyTextYOffset = -80
+cardStatsFrame.difficultyTextPrefix = "Difficulty: "
+-- Date last played text
+cardStatsFrame.dateLastPlayedTextAnchor = ANCHOR_POINTS.TOPLEFT
+cardStatsFrame.dateLastPlayedTextParentAnchor = ANCHOR_POINTS.TOPLEFT
+cardStatsFrame.dateLastPlayedTextXOffset = 20
+cardStatsFrame.dateLastPlayedTextYOffset = -40
+cardStatsFrame.dateLastPlayedTextPrefix = "Date last played: "
+-- Number of times played text
+cardStatsFrame.numberOfTimesPlayedTextAnchor = ANCHOR_POINTS.TOPLEFT
+cardStatsFrame.numberOfTimesPlayedTextParentAnchor = ANCHOR_POINTS.TOPLEFT
+cardStatsFrame.numberOfTimesPlayedTextXOffset = 20
+cardStatsFrame.numberOfTimesPlayedTextYOffset = -60
+cardStatsFrame.numberOfTimesPlayedTextPrefix = "Number of times played: "
+-- Number of times easy text
+cardStatsFrame.numberOfTimesEasyTextAnchor = ANCHOR_POINTS.TOPLEFT
+cardStatsFrame.numberOfTimesEasyTextParentAnchor = ANCHOR_POINTS.TOPLEFT
+cardStatsFrame.numberOfTimesEasyTextXOffset = 250
+cardStatsFrame.numberOfTimesEasyTextYOffset = -40
+cardStatsFrame.numberOfTimesEasyTextPrefix = "Number of \"Easy\": "
+-- Number of times medium text
+cardStatsFrame.numberOfTimesMediumTextAnchor = ANCHOR_POINTS.TOPLEFT
+cardStatsFrame.numberOfTimesMediumTextParentAnchor = ANCHOR_POINTS.TOPLEFT
+cardStatsFrame.numberOfTimesMediumTextXOffset = 250
+cardStatsFrame.numberOfTimesMediumTextYOffset = -60
+cardStatsFrame.numberOfTimesMediumTextPrefix = "Number of \"Medium\": "
+-- Number of times hard text
+cardStatsFrame.numberOfTimesHardTextAnchor = ANCHOR_POINTS.TOPLEFT
+cardStatsFrame.numberOfTimesHardTextParentAnchor = ANCHOR_POINTS.TOPLEFT
+cardStatsFrame.numberOfTimesHardTextXOffset = 250
+cardStatsFrame.numberOfTimesHardTextYOffset = -80
+cardStatsFrame.numberOfTimesHardTextPrefix = "Number of \"Hard\": "
+
 
 -- FUNCTIONS
 --------------------------------------------------------------------------------------------------------------------------------
@@ -717,6 +777,7 @@ local function createAllBaseFrames()
 	flashcardFrame.Frame = createFrame(flashcardFrame.frameName, UIParent)
 	multipleCardsDeletionConfirmationFrame.Frame = createFrame(multipleCardsDeletionConfirmationFrame.frameName, UIParent, multipleCardsDeletionConfirmationFrame.frameTitle)
 	deckSettingsFrame.Frame = createFrame(deckSettingsFrame.frameName, UIParent, "")
+	cardStatsFrame.Frame = createFrame(cardStatsFrame.frameName, UIParent, cardStatsFrame.frameTitle)
 end
 
 -- Configure the main menu frame
@@ -1050,6 +1111,13 @@ local function configureModifyDeckFrame()
 		end
 	end
 
+	-- Right click menu Card Stats button
+	function modifyDeckFrame.cardStatsButtonOnClick(cardId)
+		modifyDeckFrame.Frame:Hide()
+		cardStatsFrame.cardId = cardId
+		repositionAndShowFrame(cardStatsFrame.Frame)
+	end
+
 	-- Function to create a new row in the card list frame
 	function modifyDeckFrame.createRow(index)
 		local row = CreateFrame(FRAME_TYPES.FRAME, nil, modifyDeckFrame.listOfCardsFrameContent, FRAME_TEMPLATES.BACKDROP_TEMPLATE)
@@ -1086,6 +1154,7 @@ local function configureModifyDeckFrame()
 			    	modifyDeckFrame.singleCardSelectedRightClickMenu = MenuUtil.CreateContextMenu(rowFrame, function(owner, root)
 		      			root:CreateButton(modifyDeckFrame.rowRightClickMenuEditCardText, function() modifyDeckFrame.editCardButtonOnClick(rowFrame.cardId) end)
 		      			root:CreateButton(modifyDeckFrame.rowRightClickMenuDeleteCardText, function() modifyDeckFrame.deleteCardButtonOnClick(rowFrame.cardId) end)
+		      			root:CreateButton(modifyDeckFrame.rowRightClickMenuCardStatsText, function() modifyDeckFrame.cardStatsButtonOnClick(rowFrame.cardId) end)
 		    		end)
 		    		modifyDeckFrame.singleCardSelectedRightClickMenu:HookScript(EVENTS.ON_HIDE, function()
 		    			modifyDeckFrame.unselectRow(rowFrame)
@@ -1498,6 +1567,52 @@ local function configureFlashcardFrame()
 	end)
 end
 
+local function configureCardStatsFrame()
+	-- Change size
+	cardStatsFrame.Frame:SetSize(cardStatsFrame.width, cardStatsFrame.height)
+
+	-- Back to modify deck frame button
+	cardStatsFrame.navigateBackToModifyDeckFrameButton = createNavigationButton(cardStatsFrame.navigateBackToModifyDeckFrameButtonName, cardStatsFrame.Frame, cardStatsFrame.navigateBackToModifyDeckFrameButtonText, cardStatsFrame.navigateBackToModifyDeckFrameButtonAnchor, cardStatsFrame.navigateBackToModifyDeckFrameButtonXOffset, cardStatsFrame.navigateBackToModifyDeckFrameButtonYOffset, modifyDeckFrame.Frame, cardStatsFrame.navigateBackToModifyDeckFrameButtonSound)
+
+	-- Back to main menu button
+	cardStatsFrame.navigateBackToMainMenuButton = createNavigationButton(cardStatsFrame.navigateBackToMainMenuButtonName, cardStatsFrame.Frame, cardStatsFrame.navigateBackToMainMenuButtonText, cardStatsFrame.navigateBackToMainMenuButtonAnchor, cardStatsFrame.navigateBackToMainMenuButtonXOffset, cardStatsFrame.navigateBackToMainMenuButtonYOffset, mainMenu.Frame, cardStatsFrame.navigateBackToMainMenuButtonSound)
+
+	-- Difficulty text
+	cardStatsFrame.difficultyText = createText(cardStatsFrame.difficultyTextAnchor, cardStatsFrame.Frame, cardStatsFrame.difficultyTextParentAnchor, cardStatsFrame.difficultyTextXOffset, cardStatsFrame.difficultyTextYOffset, cardStatsFrame.difficultyTextPrefix)
+
+	-- Date last played text
+	cardStatsFrame.dateLastPlayedText = createText(cardStatsFrame.dateLastPlayedTextAnchor, cardStatsFrame.Frame, cardStatsFrame.dateLastPlayedTextParentAnchor, cardStatsFrame.dateLastPlayedTextXOffset, cardStatsFrame.dateLastPlayedTextYOffset, cardStatsFrame.dateLastPlayedTextPrefix)
+
+	-- Number of times played text
+	cardStatsFrame.numberOfTimesPlayedText = createText(cardStatsFrame.numberOfTimesPlayedTextAnchor, cardStatsFrame.Frame, cardStatsFrame.numberOfTimesPlayedTextParentAnchor, cardStatsFrame.numberOfTimesPlayedTextXOffset, cardStatsFrame.numberOfTimesPlayedTextYOffset, cardStatsFrame.numberOfTimesPlayedTextPrefix)
+
+	-- Number of times easy was selected text
+	cardStatsFrame.numberOfTimesEasyText = createText(cardStatsFrame.numberOfTimesEasyTextAnchor, cardStatsFrame.Frame, cardStatsFrame.numberOfTimesEasyTextParentAnchor, cardStatsFrame.numberOfTimesEasyTextXOffset, cardStatsFrame.numberOfTimesEasyTextYOffset, cardStatsFrame.numberOfTimesEasyTextPrefix)
+
+	-- Number of times medium was selected text
+	cardStatsFrame.numberOfTimesMediumText = createText(cardStatsFrame.numberOfTimesMediumTextAnchor, cardStatsFrame.Frame, cardStatsFrame.numberOfTimesMediumTextParentAnchor, cardStatsFrame.numberOfTimesMediumTextXOffset, cardStatsFrame.numberOfTimesMediumTextYOffset, cardStatsFrame.numberOfTimesMediumTextPrefix)
+
+	-- Number of times hard was selected text
+	cardStatsFrame.numberOfTimesHardText = createText(cardStatsFrame.numberOfTimesHardTextAnchor, cardStatsFrame.Frame, cardStatsFrame.numberOfTimesHardTextParentAnchor, cardStatsFrame.numberOfTimesHardTextXOffset, cardStatsFrame.numberOfTimesHardTextYOffset, cardStatsFrame.numberOfTimesHardTextPrefix)
+
+	-- Populate stats when frame is shown
+	cardStatsFrame.Frame:SetScript(EVENTS.ON_SHOW, function()
+		local currentDeckName = ProductiveWoW_getCurrentDeckName()
+		local difficulty = ProductiveWoW_getCardDifficulty(currentDeckName, cardStatsFrame.cardId)
+		local lastPlayedDate = ProductiveWoW_getCardDateLastPlayed(currentDeckName, cardStatsFrame.cardId)
+		local numberOfTimesPlayed = ProductiveWoW_getCardNumberOfTimesPlayed(currentDeckName, cardStatsFrame.cardId)
+		local numberOfTimesEasy = ProductiveWoW_getCardNumberOfTimesEasy(currentDeckName, cardStatsFrame.cardId)
+		local numberOfTimesMedium = ProductiveWoW_getCardNumberOfTimesMedium(currentDeckName, cardStatsFrame.cardId)
+		local numberOfTimesHard = ProductiveWoW_getCardNumberOfTimesHard(currentDeckName, cardStatsFrame.cardId)
+		cardStatsFrame.dateLastPlayedText:SetText(cardStatsFrame.dateLastPlayedTextPrefix .. ProductiveWoW_dateToString(lastPlayedDate))
+		cardStatsFrame.numberOfTimesPlayedText:SetText(cardStatsFrame.numberOfTimesPlayedTextPrefix .. tostring(numberOfTimesPlayed))
+		cardStatsFrame.difficultyText:SetText(cardStatsFrame.difficultyTextPrefix .. difficulty)
+		cardStatsFrame.numberOfTimesEasyText:SetText(cardStatsFrame.numberOfTimesEasyTextPrefix .. tostring(numberOfTimesEasy))
+		cardStatsFrame.numberOfTimesMediumText:SetText(cardStatsFrame.numberOfTimesMediumTextPrefix .. tostring(numberOfTimesMedium))
+		cardStatsFrame.numberOfTimesHardText:SetText(cardStatsFrame.numberOfTimesHardTextPrefix .. tostring(numberOfTimesHard))
+	end)
+end
+
 
 --------------------------------------------------------------------------------------------------------------------------------
 
@@ -1518,5 +1633,6 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 	configureEditCardFrame()	
 	configureDeckSettingsFrame()
 	configureFlashcardFrame()
+	configureCardStatsFrame()
 		
 end)

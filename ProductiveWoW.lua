@@ -181,6 +181,26 @@ function ProductiveWoW_getCardDifficulty(deckName, cardId)
 	return ProductiveWoW_getCardByID(deckName, cardId)[DIFFICULTY_KEY]
 end
 
+-- Get number of times played
+function ProductiveWoW_getCardNumberOfTimesPlayed(deckName, cardId)
+	return ProductiveWoW_getCardByID(deckName, cardId)[NUMBER_OF_TIMES_PLAYED_KEY]
+end
+
+-- Get number of times Easy was chosen
+function ProductiveWoW_getCardNumberOfTimesEasy(deckName, cardId)
+	return ProductiveWoW_getCardByID(deckName, cardId)[NUMBER_OF_TIMES_EASY_KEY]
+end
+
+-- Get number of times Medium was chosen
+function ProductiveWoW_getCardNumberOfTimesMedium(deckName, cardId)
+	return ProductiveWoW_getCardByID(deckName, cardId)[NUMBER_OF_TIMES_MEDIUM_KEY]
+end
+
+-- Get number of times Hard was chosen
+function ProductiveWoW_getCardNumberOfTimesHard(deckName, cardId)
+	return ProductiveWoW_getCardByID(deckName, cardId)[NUMBER_OF_TIMES_HARD_KEY]
+end
+
 -- Get table of card IDs by card difficulty
 local function getCardIdsByDifficulty(deckName, difficulty)
 	local cards = ProductiveWoW_getDeckCards(deckName)

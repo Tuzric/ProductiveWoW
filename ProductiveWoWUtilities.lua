@@ -179,3 +179,8 @@ function ProductiveWoW_numberOfDaysSinceDate(since_date)
 	local daysBetween = math.floor(diffSeconds / (24 * 60 * 60))
 	return daysBetween
 end
+
+-- Date to string
+function ProductiveWoW_dateToString(date)
+	return date["day"] .. "-" .. date["month"] .. "-" .. date["year"]
+end
