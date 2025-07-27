@@ -19,9 +19,13 @@ local MEDIUM = "medium" -- Constant string value representing the Medium difficu
 local HARD = "hard" -- Constant string value representing the Hard difficulty of a card
 local NEW_DECK_DATE = date("*t", time() - 180000) -- About 2 days before today. This is the initial value of deck["date last played"] when a new deck is created and it has to be 2 days before so that its status is set to "Not Played Today"
 local ALL_CARDS = -1 -- Test on all cards per day
+local DEFAULT_ROW_SCALE = 0.5 -- 50% of max allowed row scale
+local DEFAULT_FLASHCARD_FONT_SIZE = 12
 -- All variables with _KEY contain the string value used as the key in some table
 local DECKS_KEY = "decks"
-local CURRENTLY_SELECTED_DECK_KEY = "currently_selected_deck"
+local CURRENTLY_SELECTED_DECK_KEY = "currently selected deck"
+local ROW_SCALE_KEY = "row scale"
+local FLASHCARD_FONT_SIZE_KEY = "flashcard font size"
 local CARDS_KEY = "cards"
 local QUESTION_KEY = "question"
 local ANSWER_KEY = "answer"
@@ -52,7 +56,6 @@ local cardTableDefaultValues = {[QUESTION_KEY] = "", [ANSWER_KEY] = "", [DIFFICU
 								[NUMBER_OF_TIMES_PLAYED_KEY] = 0, [NUMBER_OF_TIMES_EASY_KEY] = 0, [NUMBER_OF_TIMES_MEDIUM_KEY] = 0,
 								[NUMBER_OF_TIMES_HARD_KEY] = 0}
 
-
 -- QUIZ VARIABLES -- 
 --------------------------------------------------------------------------------------------------------------------------------
 ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs = {} -- When you press "Go" to start the quiz, this table stores the subset of Card IDs from the deck that is being quizzed
@@ -62,7 +65,7 @@ local timeWhenDeckCanBePlayedAgain = 10 -- Each new day, the deck can be played 
 
 -- OTHER --
 --------------------------------------------------------------------------------------------------------------------------------
-local savedSettingsTableInitialValues = {[CURRENTLY_SELECTED_DECK_KEY] = nil}
+local savedSettingsTableInitialValues = {[CURRENTLY_SELECTED_DECK_KEY] = nil, [ROW_SCALE_KEY] = DEFAULT_ROW_SCALE, [FLASHCARD_FONT_SIZE_KEY] = DEFAULT_FLASHCARD_FONT_SIZE}
 local dataTableInitialValues = {[DECKS_KEY] = {}}
 
 
@@ -213,6 +216,16 @@ local function getCardIdsByDifficulty(deckName, difficulty)
 	return cardIds
 end
 
+-- Get Saved Settings row scale value
+function ProductiveWoW_getSavedSettingsRowScale()
+	return ProductiveWoWSavedSettings[ROW_SCALE_KEY]
+end
+
+-- Get Saved Settings flashcard font size value
+function ProductiveWoW_getSavedSettingsFlashcardFontSize()
+	return ProductiveWoWSavedSettings[FLASHCARD_FONT_SIZE_KEY]
+end
+
 -- SETTERS --
 --------------------------------------------------------------------------------------------------------------------------------
 
@@ -294,6 +307,16 @@ end
 -- Set the card's answer
 function ProductiveWoW_setCardAnswer(deckName, cardId, answer)
 	ProductiveWoW_getCardByID(deckName, cardId)[ANSWER_KEY] = answer
+end
+
+-- Set Saved Settings row scale value
+function ProductiveWoW_setSavedSettingsRowScale(newRowScale)
+	ProductiveWoWSavedSettings[ROW_SCALE_KEY] = newRowScale
+end
+
+-- Set Saved Settings flashcard font size value
+function ProductiveWoW_setSavedSettingsFlashcardFontSize(newFontSize)
+	ProductiveWoWSavedSettings[FLASHCARD_FONT_SIZE_KEY] = newFontSize
 end
 
 -- DECK FUNCTIONS --
@@ -578,6 +601,18 @@ function ProductiveWoW_beginQuiz()
 	ProductiveWoW_drawRandomNextCard()
 end
 
+-- OTHER FUNCTIONS --
+--------------------------------------------------------------------------------------------------------------------------------
+
+-- If new keys were added to the saved settings table in newer versions of the addon, add the new keys and initialize them to the default values
+local function updateSavedSettingsTableWithNewKeys()
+	for key, defaultValue in pairs(savedSettingsTableInitialValues) do
+		if ProductiveWoWSavedSettings[key] == nil then
+			ProductiveWoWSavedSettings[key] = defaultValue
+		end
+	end
+end
+
 
 --============================================================================================================================--
 
@@ -590,6 +625,9 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 		ProductiveWoWSavedSettings = {[CURRENTLY_SELECTED_DECK_KEY] = nil}
 		ProductiveWoWData = {[DECKS_KEY] = {}}
 	end
+
+	-- Update saved variables tables with any new keys that were added in subsequent versions of the addon
+	updateSavedSettingsTableWithNewKeys()
 
 	-- Import decks from ProductiveWoWDecks.lua
 	ProductiveWoW_importDecks()
@@ -614,17 +652,6 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 			ProductiveWoW_showMainMenu()
 		end
 	end
-
-	-- -- OPTIONS TAB -- Currently not used
-	-- -- Options config panel
-	-- -- Parent layout
-	-- local category = Settings.RegisterVerticalLayoutCategory("ProductiveWoW")
-
-	-- -- Add settings
-	-- -- Open main menu button
-
-
-	-- Settings.RegisterAddOnCategory(category)
 
 end)
 

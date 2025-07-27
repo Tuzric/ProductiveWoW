@@ -34,6 +34,7 @@ TEXT_CONSTANTS.OVERLAY = "OVERLAY"
 TEXT_CONSTANTS.GAME_FONT_NORMAL = "GameFontNormal"
 TEXT_CONSTANTS.GAME_FONT_HIGHLIGHT = "GameFontHighlight"
 TEXT_CONSTANTS.JUSTIFY_LEFT = "LEFT"
+TEXT_CONSTANTS.DEFAULT_FONT = "Fonts\\FRIZQT__.TTF"
 -- Textures
 local TEXTURE_TEMPLATES = {}
 TEXTURE_TEMPLATES.ARTWORK = "ARTWORK"
@@ -128,6 +129,12 @@ mainMenu.navigateToFlashcardFrameButtonNoCardsInDeckMessage = "There are no card
 mainMenu.navigateToFlashcardFrameButtonNoSelectedDeckMessage = "No deck is currently selected."
 mainMenu.navigateToFlashcardFrameButtonNavigationConditions = nil -- Function that's defined further down
 mainMenu.navigateToFlashcardFrameButtonOnNavigation = nil -- Function that's defined further down
+-- Navigate to addon settings frame button
+mainMenu.navigateToAddonSettingsButtonName = "NavigateToAddonSettingsFromMainMenuButton"
+mainMenu.navigateToAddonSettingsButtonText = "Settings"
+mainMenu.navigateToAddonSettingsButtonAnchor = ANCHOR_POINTS.TOPLEFT
+mainMenu.navigateToAddonSettingsButtonXOffset = 230
+mainMenu.navigateToAddonSettingsButtonYOffset = -62
 
 -- Create deck frame
 local createDeckFrame = {}
@@ -224,7 +231,8 @@ modifyDeckFrame.sortedQuestions = {}
 modifyDeckFrame.rows = {}
 modifyDeckFrame.currentNumberOfRowsOnPage = 0 -- Used to keep track when this reaches 0 when a user deletes enough cards, to auto-switch to the previous page
 modifyDeckFrame.rowWidthAmountSmallerThanFrameWidth = 45 -- The width of the row is determine by the width of the frame minus this number
-modifyDeckFrame.listOfCardsFrameRowHeight = 20
+modifyDeckFrame.listOfCardsFrameDefaultMaxRowHeight = 40
+modifyDeckFrame.rowTextDefaultMaxFontSize = 24
 modifyDeckFrame.rowBackdropTexture = "Interface\\Tooltips\\UI-Tooltip-Background"
 modifyDeckFrame.rowBorderTexture = "Interface\\Tooltips\\UI-Tooltip-Border"
 modifyDeckFrame.rowBackdropColour = {0.1, 0.1, 0.1, 0.8}
@@ -258,6 +266,7 @@ modifyDeckFrame.createPages = nil -- Function to create the pages of cards
 modifyDeckFrame.getPage = nil -- Function to get a page by its index
 modifyDeckFrame.getCurrentPage = nil -- Function to return current page table
 modifyDeckFrame.refreshListOfCards = nil -- Function to refresh the list of cards shown
+modifyDeckFrame.rescaleRows = nil -- Resize rows if the scale was changed in the settings
 modifyDeckFrame.cancelSearch = nil -- Function to cancel search
 modifyDeckFrame.listOfCardsFrameTopLeftAnchorXOffset = 10
 modifyDeckFrame.listOfCardsFrameTopLeftAnchorYOffset = -90
@@ -573,6 +582,59 @@ cardStatsFrame.numberOfTimesHardTextXOffset = 250
 cardStatsFrame.numberOfTimesHardTextYOffset = -80
 cardStatsFrame.numberOfTimesHardTextPrefix = "Number of \"Hard\": "
 
+-- Addon settings frame
+local addonSettingsFrame = {}
+addonSettingsFrame.frameName = "AddonSettingsFrame"
+addonSettingsFrame.frameTitle = ProductiveWoW_ADDON_NAME .. " Settings"
+addonSettingsFrame.width = commonFrameAttributes.basicFrameWidth + 100
+addonSettingsFrame.height = commonFrameAttributes.basicFrameHeight + 50
+-- Navigate back to main menu button
+addonSettingsFrame.navigateBackToMainMenuButtonName = "NavigateBackToMainMenuFromAddonSettingsButton"
+addonSettingsFrame.navigateBackToMainMenuButtonText = "Main Menu"
+addonSettingsFrame.navigateBackToMainMenuButtonAnchor = ANCHOR_POINTS.BOTTOMRIGHT
+addonSettingsFrame.navigateBackToMainMenuButtonXOffset = -20
+addonSettingsFrame.navigateBackToMainMenuButtonYOffset = 20
+addonSettingsFrame.navigateBackToMainMenuButtonSound = SOUNDKIT.IG_CHARACTER_INFO_CLOSE
+-- Save settings button
+addonSettingsFrame.saveButtonName = "AddonSettingsSaveSettingsButton"
+addonSettingsFrame.saveButtonText = "Save"
+addonSettingsFrame.saveButtonAnchor = ANCHOR_POINTS.BOTTOMLEFT
+addonSettingsFrame.saveButtonXOffset = 20
+addonSettingsFrame.saveButtonYOffset = 20
+addonSettingsFrame.saveSettingsButtonOnClick = nil -- Function that runs when button is clicked
+addonSettingsFrame.successfullySavedSettingsMessage = "Successfully saved settings."
+-- Modify deck frame row scale text
+addonSettingsFrame.rowScaleTextAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.rowScaleTextParentAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.rowScaleTextXOffset = 20
+addonSettingsFrame.rowScaleTextYOffset = -40
+addonSettingsFrame.rowScaleTextValue = "List of cards row scale (50%-100%): "
+-- Modify deck frame row scale textbox
+addonSettingsFrame.rowScaleTextBoxName = "RowScaleTextBox"
+addonSettingsFrame.rowScaleTextBoxWidth = 40
+addonSettingsFrame.rowScaleTextBoxHeight = 20
+addonSettingsFrame.rowScaleTextBoxAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.rowScaleTextBoxXOffset = 240
+addonSettingsFrame.rowScaleTextBoxYOffset = -36
+addonSettingsFrame.invalidRowScaleMessage = "You need to enter a number or percent between 50-100% (e.g. either 50 or 50% works)."
+addonSettingsFrame.rowScaleMinValue = 50
+addonSettingsFrame.rowScaleMaxValue = 100
+-- Flashcard frame font size setting text
+addonSettingsFrame.flashcardFrameFontSizeTextAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.flashcardFrameFontSizeTextParentAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.flashcardFrameFontSizeTextXOffset = 20
+addonSettingsFrame.flashcardFrameFontSizeTextYOffset = -60
+addonSettingsFrame.flashcardFrameFontSizeTextValue = "Flashcard font size (12-24): "
+-- Flashcard frame font size setting textbox
+addonSettingsFrame.flashcardFrameFontSizeTextBoxName = "FlashcardFontSizeTextBox"
+addonSettingsFrame.flashcardFrameFontSizeTextBoxWidth = 40
+addonSettingsFrame.flashcardFrameFontSizeTextBoxHeight = 20
+addonSettingsFrame.flashcardFrameFontSizeTextBoxAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.flashcardFrameFontSizeTextBoxXOffset = 240
+addonSettingsFrame.flashcardFrameFontSizeTextBoxYOffset = -56
+addonSettingsFrame.invalidFlashcardFontSizeMessage = "Flashcard font size has to be a value between 12 and 24."
+addonSettingsFrame.flashcardFontSizeMinValue = 12
+addonSettingsFrame.flashcardFontSizeMaxValue = 24
 
 -- FUNCTIONS
 --------------------------------------------------------------------------------------------------------------------------------
@@ -778,6 +840,7 @@ local function createAllBaseFrames()
 	multipleCardsDeletionConfirmationFrame.Frame = createFrame(multipleCardsDeletionConfirmationFrame.frameName, UIParent, multipleCardsDeletionConfirmationFrame.frameTitle)
 	deckSettingsFrame.Frame = createFrame(deckSettingsFrame.frameName, UIParent, "")
 	cardStatsFrame.Frame = createFrame(cardStatsFrame.frameName, UIParent, cardStatsFrame.frameTitle)
+	addonSettingsFrame.Frame = createFrame(addonSettingsFrame.frameName, UIParent, addonSettingsFrame.frameTitle)
 end
 
 -- Configure the main menu frame
@@ -864,6 +927,9 @@ local function configureMainMenuFrame()
 		flashcardFrame.showAnswerButton:Show()
 	end
 	mainMenu.navigateToFlashcardFrameButton = createNavigationButton(mainMenu.navigateToFlashcardFrameButtonName, mainMenu.Frame, mainMenu.navigateToFlashcardFrameButtonText, mainMenu.navigateToFlashcardFrameButtonAnchor, mainMenu.navigateToFlashcardFrameButtonXOffset, mainMenu.navigateToFlashcardFrameButtonYOffset, flashcardFrame.Frame, nil, nil, mainMenu.navigateToFlashcardFrameButtonNavigationConditions, mainMenu.navigateToFlashcardFrameButtonOnNavigation)
+
+	-- Navigate to addon settings frame button
+	mainMenu.navigateToAddonSettingsButton = createNavigationButton(mainMenu.navigateToAddonSettingsButtonName, mainMenu.Frame, mainMenu.navigateToAddonSettingsButtonText, mainMenu.navigateToAddonSettingsButtonAnchor, mainMenu.navigateToAddonSettingsButtonXOffset, mainMenu.navigateToAddonSettingsButtonYOffset, addonSettingsFrame.Frame)
 end
 
 -- Configure create deck frame
@@ -1122,8 +1188,8 @@ local function configureModifyDeckFrame()
 	function modifyDeckFrame.createRow(index)
 		local row = CreateFrame(FRAME_TYPES.FRAME, nil, modifyDeckFrame.listOfCardsFrameContent, FRAME_TEMPLATES.BACKDROP_TEMPLATE)
 		row.selected = false
-		row:SetSize(modifyDeckFrame.Frame:GetWidth() - modifyDeckFrame.rowWidthAmountSmallerThanFrameWidth, modifyDeckFrame.listOfCardsFrameRowHeight)
-		row:SetPoint(ANCHOR_POINTS.TOPLEFT, 0, -((index - 1) * modifyDeckFrame.listOfCardsFrameRowHeight))
+		row:SetSize(modifyDeckFrame.Frame:GetWidth() - modifyDeckFrame.rowWidthAmountSmallerThanFrameWidth, math.floor(modifyDeckFrame.listOfCardsFrameDefaultMaxRowHeight * ProductiveWoW_getSavedSettingsRowScale()))
+		row:SetPoint(ANCHOR_POINTS.TOPLEFT, 0, -((index - 1) * math.floor(modifyDeckFrame.listOfCardsFrameDefaultMaxRowHeight * ProductiveWoW_getSavedSettingsRowScale())))
 		row:EnableMouse(true)
 		row:SetBackdrop({
 			bgFile   = modifyDeckFrame.rowBackdropTexture,
@@ -1144,6 +1210,8 @@ local function configureModifyDeckFrame()
 		row.question:SetWidth((modifyDeckFrame.Frame:GetWidth() - modifyDeckFrame.rowQuestionTextWidthAmountSmallerThanFrameWidth) / 2)
 		row.answer = createText(ANCHOR_POINTS.LEFT, row, ANCHOR_POINTS.LEFT, modifyDeckFrame.Frame:GetWidth() / 2, 0)
 		row.answer:SetWidth((modifyDeckFrame.Frame:GetWidth() - modifyDeckFrame.rowAnswerTextWidthAmountSmallerThanFrameWidth) / 2)
+		row.question:SetFont(TEXT_CONSTANTS.DEFAULT_FONT, math.floor(modifyDeckFrame.rowTextDefaultMaxFontSize * ProductiveWoW_getSavedSettingsRowScale()))
+		row.answer:SetFont(TEXT_CONSTANTS.DEFAULT_FONT, math.floor(modifyDeckFrame.rowTextDefaultMaxFontSize * ProductiveWoW_getSavedSettingsRowScale()))
 		row:SetScript(EVENTS.ON_MOUSE_UP, function(rowFrame, button)
 			if button == INPUT_BUTTONS.MOUSE_RIGHT then
 				if not rowFrame.selected then
@@ -1280,7 +1348,7 @@ local function configureModifyDeckFrame()
 			modifyDeckFrame.rows[i]:Hide()
 		end
 		-- Resize scroll content
-		modifyDeckFrame.listOfCardsFrameContent:SetHeight(ProductiveWoW_tableLength(modifyDeckFrame.rows) * modifyDeckFrame.listOfCardsFrameRowHeight)
+		modifyDeckFrame.listOfCardsFrameContent:SetHeight(ProductiveWoW_tableLength(modifyDeckFrame.rows) * math.floor(modifyDeckFrame.listOfCardsFrameDefaultMaxRowHeight * ProductiveWoW_getSavedSettingsRowScale()))
 	end
 
 	-- Refresh the list of cards
@@ -1291,9 +1359,20 @@ local function configureModifyDeckFrame()
 		modifyDeckFrame.currentPageText:SetText(modifyDeckFrame.currentPageIndex .. " of " .. modifyDeckFrame.maximumPages)
 	end
 
+	function modifyDeckFrame.rescaleRows()
+		for tableIndex, row in pairs(modifyDeckFrame.rows) do
+			row:SetHeight(math.floor(modifyDeckFrame.listOfCardsFrameDefaultMaxRowHeight * ProductiveWoW_getSavedSettingsRowScale()))
+			row.question:SetFont(TEXT_CONSTANTS.DEFAULT_FONT, math.floor(modifyDeckFrame.rowTextDefaultMaxFontSize * ProductiveWoW_getSavedSettingsRowScale()))
+			row.answer:SetFont(TEXT_CONSTANTS.DEFAULT_FONT,math.floor(modifyDeckFrame.rowTextDefaultMaxFontSize * ProductiveWoW_getSavedSettingsRowScale()))
+			row:ClearAllPoints()
+			row:SetPoint(ANCHOR_POINTS.TOPLEFT, 0, -((tableIndex - 1) * math.floor(modifyDeckFrame.listOfCardsFrameDefaultMaxRowHeight * ProductiveWoW_getSavedSettingsRowScale())))
+		end
+	end
+
 	-- Re-populate rows when frame is shown
 	modifyDeckFrame.Frame:SetScript(EVENTS.ON_SHOW, function(self)
 		modifyDeckFrame.currentPageIndex = 1
+		modifyDeckFrame.rescaleRows()
 		modifyDeckFrame.cancelSearch()
 		modifyDeckFrame.createPages()
 		modifyDeckFrame.refreshListOfCards()
@@ -1562,6 +1641,8 @@ local function configureFlashcardFrame()
 
 	-- OnShow script to refresh question
 	flashcardFrame.Frame:SetScript(EVENTS.ON_SHOW, function(self)
+		-- Resize font if it has changed in settings
+		flashcardFrame.displayedText:SetFont(TEXT_CONSTANTS.DEFAULT_FONT, ProductiveWoW_getSavedSettingsFlashcardFontSize())
 		ProductiveWoW_beginQuiz()
 		flashcardFrame.showNextCard()
 	end)
@@ -1613,6 +1694,103 @@ local function configureCardStatsFrame()
 	end)
 end
 
+local function configureAddonSettingsFrame()
+	-- Resize
+	addonSettingsFrame.Frame:SetSize(addonSettingsFrame.width, addonSettingsFrame.height)
+
+	-- Navigate back to main menu button
+	addonSettingsFrame.navigateBackToMainMenuButton = createNavigationButton(addonSettingsFrame.navigateBackToMainMenuButtonName, addonSettingsFrame.Frame, addonSettingsFrame.navigateBackToMainMenuButtonText, addonSettingsFrame.navigateBackToMainMenuButtonAnchor, addonSettingsFrame.navigateBackToMainMenuButtonXOffset, addonSettingsFrame.navigateBackToMainMenuButtonYOffset, mainMenu.Frame, addonSettingsFrame.navigateBackToMainMenuButtonSound)
+
+	-- Modify deck frame row scale setting text
+	addonSettingsFrame.rowScaleText = createText(addonSettingsFrame.rowScaleTextAnchor, addonSettingsFrame.Frame, addonSettingsFrame.rowScaleTextParentAnchor, addonSettingsFrame.rowScaleTextXOffset, addonSettingsFrame.rowScaleTextYOffset, addonSettingsFrame.rowScaleTextValue)
+
+	-- Modify deck frame row scale textbox
+	addonSettingsFrame.rowScaleTextBox = createTextBox(addonSettingsFrame.rowScaleTextBoxName, addonSettingsFrame.Frame, addonSettingsFrame.rowScaleTextBoxWidth, addonSettingsFrame.rowScaleTextBoxHeight, addonSettingsFrame.rowScaleTextBoxAnchor, addonSettingsFrame.rowScaleTextBoxXOffset, addonSettingsFrame.rowScaleTextBoxYOffset)
+
+	-- Flashcard frame font size setting text
+	addonSettingsFrame.flashcardFrameFontSizeText = createText(addonSettingsFrame.flashcardFrameFontSizeTextAnchor, addonSettingsFrame.Frame, addonSettingsFrame.flashcardFrameFontSizeTextParentAnchor, addonSettingsFrame.flashcardFrameFontSizeTextXOffset, addonSettingsFrame.flashcardFrameFontSizeTextYOffset, addonSettingsFrame.flashcardFrameFontSizeTextValue)
+
+	-- Flashcard frame font size setting textbox
+	addonSettingsFrame.flashcardFrameFontSizeTextBox = createTextBox(addonSettingsFrame.flashcardFrameFontSizeTextBoxName, addonSettingsFrame.Frame, addonSettingsFrame.flashcardFrameFontSizeTextBoxWidth, addonSettingsFrame.flashcardFrameFontSizeTextBoxHeight, addonSettingsFrame.flashcardFrameFontSizeTextBoxAnchor, addonSettingsFrame.flashcardFrameFontSizeTextBoxXOffset, addonSettingsFrame.flashcardFrameFontSizeTextBoxYOffset)
+
+	-- Populate textboxes with existing settings on show
+	addonSettingsFrame.Frame:SetScript(EVENTS.ON_SHOW, function()
+		-- Row scale
+		if ProductiveWoW_getSavedSettingsRowScale() ~= nil then
+			addonSettingsFrame.rowScaleTextBox:SetText(ProductiveWoW_getSavedSettingsRowScale() * 100)
+			addonSettingsFrame.rowScaleTextBox:SetTextColor(unpack(COLOURS.WHITE))
+		end
+		-- Flashcard font size
+		if ProductiveWoW_getSavedSettingsFlashcardFontSize() ~= nil then
+			addonSettingsFrame.flashcardFrameFontSizeTextBox:SetText(ProductiveWoW_getSavedSettingsFlashcardFontSize())
+			addonSettingsFrame.flashcardFrameFontSizeTextBox:SetTextColor(unpack(COLOURS.WHITE))
+		end
+	end)
+
+	-- Save settings button
+	function addonSettingsFrame.saveSettingsButtonOnClick()
+		local settingWasChanged = false
+
+		-- Row scale setting
+		local rowScaleValue = addonSettingsFrame.rowScaleTextBox:GetText()
+		local invalidRowScaleValue = false 
+		if ProductiveWoW_isPercent(rowScaleValue) then
+			if string.find(rowScaleValue, "%%") then
+				rowScaleValue = string.sub(rowScaleValue, 1, #rowScaleValue - 1) -- Remove % sign
+			end
+			rowScaleValue = tonumber(rowScaleValue)
+			if rowScaleValue >= addonSettingsFrame.rowScaleMinValue and rowScaleValue <= addonSettingsFrame.rowScaleMaxValue then
+				if rowScaleValue ~= ProductiveWoW_getSavedSettingsRowScale() * 100 then -- Checking if the value has actually changed
+					rowScaleValue = rowScaleValue / 100
+					ProductiveWoW_setSavedSettingsRowScale(rowScaleValue)
+					settingWasChanged = true
+				end
+			else
+				invalidRowScaleValue = true
+			end
+		else
+			invalidRowScaleValue = true
+		end
+		if invalidRowScaleValue == true then
+			print(addonSettingsFrame.invalidRowScaleMessage)
+			clearTextBox(addonSettingsFrame.rowScaleTextBox)
+			addonSettingsFrame.rowScaleTextBox:SetText(ProductiveWoW_getSavedSettingsRowScale() * 100)
+			addonSettingsFrame.rowScaleTextBox:SetTextColor(unpack(COLOURS.WHITE))
+		end
+
+		-- Flashcard font size
+		local flashcardFontSize = addonSettingsFrame.flashcardFrameFontSizeTextBox:GetText()
+		local invalidFlashcardFontSize = false
+		if ProductiveWoW_isNumeric(flashcardFontSize) then 
+			flashcardFontSize = tonumber(flashcardFontSize)
+			if flashcardFontSize >= addonSettingsFrame.flashcardFontSizeMinValue and flashcardFontSize <= addonSettingsFrame.flashcardFontSizeMaxValue then
+				if flashcardFontSize ~= ProductiveWoW_getSavedSettingsFlashcardFontSize() then -- Checking the value has actually changed
+					ProductiveWoW_setSavedSettingsFlashcardFontSize(flashcardFontSize)
+					settingWasChanged = true
+				end
+			else
+				invalidFlashcardFontSize = true
+			end
+		else
+			invalidFlashcardFontSize = true
+		end
+		if invalidFlashcardFontSize == true then
+			print(addonSettingsFrame.invalidFlashcardFontSizeMessage)
+			clearTextBox(addonSettingsFrame.flashcardFrameFontSizeTextBox)
+			addonSettingsFrame.flashcardFrameFontSizeTextBox:SetText(ProductiveWoW_getSavedSettingsFlashcardFontSize())
+			addonSettingsFrame.flashcardFrameFontSizeTextBox:SetTextColor(unpack(COLOURS.WHITE))
+		end
+
+		-- Clear all textbox focus
+		addonSettingsFrame.rowScaleTextBox:ClearFocus()
+		addonSettingsFrame.flashcardFrameFontSizeTextBox:ClearFocus()
+		if settingWasChanged == true then
+			print(addonSettingsFrame.successfullySavedSettingsMessage)
+		end
+	end
+	addonSettingsFrame.saveButton = createButton(addonSettingsFrame.saveButtonName, addonSettingsFrame.Frame, addonSettingsFrame.saveButtonText, addonSettingsFrame.saveButtonAnchor, addonSettingsFrame.saveButtonXOffset, addonSettingsFrame.saveButtonYOffset, addonSettingsFrame.saveSettingsButtonOnClick)
+end
+
 
 --------------------------------------------------------------------------------------------------------------------------------
 
@@ -1634,5 +1812,6 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 	configureDeckSettingsFrame()
 	configureFlashcardFrame()
 	configureCardStatsFrame()
+	configureAddonSettingsFrame()
 		
 end)

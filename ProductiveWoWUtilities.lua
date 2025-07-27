@@ -166,6 +166,11 @@ function ProductiveWoW_isNumeric(str)
     return str:match("^%d+$") ~= nil
 end
 
+-- Check if a string is a percent
+function ProductiveWoW_isPercent(str)
+	return str:match("^%d+%%?$") ~= nil
+end
+
 
 -- DATETIME FUNCTIONS -- 
 --------------------------------------------------------------------------------------------------------------------------------
