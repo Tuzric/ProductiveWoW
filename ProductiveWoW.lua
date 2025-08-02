@@ -21,11 +21,13 @@ local NEW_DECK_DATE = date("*t", time() - 180000) -- About 2 days before today. 
 local ALL_CARDS = -1 -- Test on all cards per day
 local DEFAULT_ROW_SCALE = 0.5 -- 50% of max allowed row scale
 local DEFAULT_FLASHCARD_FONT_SIZE = 12
+local REMINDER_SOUND = SOUNDKIT.TELL_MESSAGE
 -- All variables with _KEY contain the string value used as the key in some table
 local DECKS_KEY = "decks"
 local CURRENTLY_SELECTED_DECK_KEY = "currently selected deck"
 local ROW_SCALE_KEY = "row scale"
 local FLASHCARD_FONT_SIZE_KEY = "flashcard font size"
+local REMINDER_ON_FLIGHT_PATH_KEY = "reminder on flight path"
 local CARDS_KEY = "cards"
 local QUESTION_KEY = "question"
 local ANSWER_KEY = "answer"
@@ -48,7 +50,7 @@ local NUMBER_OF_TIMES_HARD_KEY = "number of times hard"
 --------------------------------------------------------------------------------------------------------------------------------
 local deckTableDefaultValues = {[CARDS_KEY] = {}, [NEXT_CARD_ID_KEY] = 1, [STARTED_TODAY_KEY] = false, [COMPLETED_TODAY_KEY] = false,
 								[DATE_LAST_PLAYED_KEY] = NEW_DECK_DATE, [LIST_OF_CARDS_REMAINING_TODAY_KEY] = {},
-								[DAILY_NUMBER_OF_CARDS_KEY] = ALL_CARDS, [NUMBER_OF_TIMES_PLAYED_KEY] = 0}
+								[DAILY_NUMBER_OF_CARDS_KEY] = ALL_CARDS, [NUMBER_OF_TIMES_PLAYED_KEY] = 0, [REMINDER_ON_FLIGHT_PATH_KEY] = false}
 
 -- CARD VARIABLES -- 
 --------------------------------------------------------------------------------------------------------------------------------
@@ -81,6 +83,24 @@ ProductiveWoWData = ProductiveWoWData or dataTableInitialValues
 
 
 -- FUNCTION DEFINITIONS --
+
+-- GENERAL FUNCTIONS --
+--------------------------------------------------------------------------------------------------------------------------------
+
+-- If new keys were added to the saved settings table in newer versions of the addon, add the new keys and initialize them to the default values
+local function updateSavedSettingsTableWithNewKeys()
+	for key, defaultValue in pairs(savedSettingsTableInitialValues) do
+		if ProductiveWoWSavedSettings[key] == nil then
+			ProductiveWoWSavedSettings[key] = defaultValue
+		end
+	end
+end
+
+-- Print alert/reminder in red text
+function ProductiveWoW_printReminder(message)
+	print("|cFFFF0000" .. message .. "|r")
+end
+
 
 -- GETTERS AND SETTERS --
 
@@ -226,6 +246,21 @@ function ProductiveWoW_getSavedSettingsFlashcardFontSize()
 	return ProductiveWoWSavedSettings[FLASHCARD_FONT_SIZE_KEY]
 end
 
+-- Get deck reminder on flight path taken true/false
+function ProductiveWoW_getDeckReminderOnFlightPath(deckName)
+	return ProductiveWoW_getDeck(deckName)[REMINDER_ON_FLIGHT_PATH_KEY]
+end
+
+-- Check if any decks have reminders when flight path is taken
+function ProductiveWoW_anyReminderOnFlightPath()
+	for deckName, deckTable in pairs(ProductiveWoW_getAllDecks()) do
+		if ProductiveWoW_getDeckReminderOnFlightPath(deckName) == true then
+			return true
+		end
+	end
+	return false
+end
+
 -- SETTERS --
 --------------------------------------------------------------------------------------------------------------------------------
 
@@ -263,6 +298,11 @@ end
 -- Set the next card id of the deck. Card Ids are assigned sequentially (e.g. first card has an Id of 1, 2nd one is 2, etc.)
 function ProductiveWoW_setDeckNextCardId(deckName, nextCardId)
 	ProductiveWoW_getDeck(deckName)[NEXT_CARD_ID_KEY] = nextCardId
+end
+
+-- Set deck reminder on flight path taken true/false
+function ProductiveWoW_setDeckReminderOnFlightPath(deckName, newValue)
+	ProductiveWoW_getDeck(deckName)[REMINDER_ON_FLIGHT_PATH_KEY] = newValue
 end
 
 -- Set date last played of a card
@@ -407,6 +447,25 @@ function ProductiveWoW_getDeckCardsContainingSubstringInQuestionOrAnswer(deckNam
 	return matches
 end
 
+-- Send out reminders to do the deck
+function ProductiveWoW_sendDeckReminder(deckName)
+	ProductiveWoW_printReminder(ProductiveWoW_ADDON_NAME .. ": Reminder to study deck - " .. deckName)
+end
+
+-- Send reminders when flight path taken
+function ProductiveWoW_sendDeckReminderOnFlightPathTaken()
+	local anyReminderSent = false
+	for deckName, deckTable in pairs(ProductiveWoW_getAllDecks()) do
+		if ProductiveWoW_getDeckReminderOnFlightPath() == true then
+			ProductiveWoW_sendDeckReminder(deckName)
+			anyReminderSent = true
+		end
+	end
+	if anyReminderSent == true then
+		PlaySound(REMINDER_SOUND)
+	end
+end
+
 -- CARD FUNCTIONS --
 --------------------------------------------------------------------------------------------------------------------------------
 
@@ -536,7 +595,7 @@ local function getDeckSubsetForQuiz()
 		if numberOfHardCards == maxLimit then
 			return hardCardIds
 		elseif numberOfHardCards > maxLimit then
-			subset = ProductiveWoW_getRandomSubsetOfTable(hardCardIds, maxLimit)
+			subset = ProductiveWoW_getRandomSubsetOfArrayTable(hardCardIds, maxLimit)
 			return subset
 		else
 			-- If it's smaller than maxLimit we need to add some Medium difficulty cards
@@ -548,7 +607,7 @@ local function getDeckSubsetForQuiz()
 				subset = ProductiveWoW_mergeTables(subset, mediumCardIds)
 				return subset
 			elseif numberOfMediumCards > remainingLimit then
-				local mediumCardsSubset = ProductiveWoW_getRandomSubsetOfTable(mediumCardIds, remainingLimit)
+				local mediumCardsSubset = ProductiveWoW_getRandomSubsetOfArrayTable(mediumCardIds, remainingLimit)
 				subset = ProductiveWoW_mergeTables(subset, mediumCardsSubset)
 				return subset
 			else
@@ -563,7 +622,7 @@ local function getDeckSubsetForQuiz()
 					return subset
 				else
 					-- If there are more easy cards than the remaining limit allows, get a random subset of them
-					local easyCardsSubset = ProductiveWoW_getRandomSubsetOfTable(easyCardIds, remainingLimit)
+					local easyCardsSubset = ProductiveWoW_getRandomSubsetOfArrayTable(easyCardIds, remainingLimit)
 					subset = ProductiveWoW_mergeTables(subset, easyCardsSubset)
 					return subset
 				end
@@ -599,18 +658,6 @@ function ProductiveWoW_beginQuiz()
 		setDeckStartedToday(currentDeckName, ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs)
 	end
 	ProductiveWoW_drawRandomNextCard()
-end
-
--- OTHER FUNCTIONS --
---------------------------------------------------------------------------------------------------------------------------------
-
--- If new keys were added to the saved settings table in newer versions of the addon, add the new keys and initialize them to the default values
-local function updateSavedSettingsTableWithNewKeys()
-	for key, defaultValue in pairs(savedSettingsTableInitialValues) do
-		if ProductiveWoWSavedSettings[key] == nil then
-			ProductiveWoWSavedSettings[key] = defaultValue
-		end
-	end
 end
 
 
@@ -659,55 +706,362 @@ end)
 -- UNIT TESTS --
 --============================================================================================================================--
 
-
+local unitTests = {}
 if runUnitTests == true then
 
+	local function toRedText(text)
+		return "|cFFFF0000" .. text .. "|r"
+	end
+
+	local function toGreenText(text)
+		return "|cFF00FF00" .. text .. "|r"
+	end
+
+	local function printResult(testResult, callingFunctionName)
+		local text = callingFunctionName .. " passed: " .. tostring(testResult)
+		if testResult == true then
+			print(toGreenText(text))
+		else
+			print(toRedText(text))
+		end
+	end
+
+	local function areSetsEqual(set1, set2)
+	    if #set1 ~= #set2 then return false end
+	    local found = {}
+	    for _, v in ipairs(set1) do found[v] = true end
+	    for _, v in ipairs(set2) do
+	        if not found[v] then return false end
+	    end
+	    return true
+	end
+
 	-- ProductiveWoWUtilities.lua Unit Tests --
-	local function ProductiveWoW_tableIsArray_testValueIsArray()
+	function unitTests.ProductiveWoW_tableIsArray_testValueIsArray()
 		local testTable = {"A", {}, true, 1}
 		local testResult = ProductiveWoW_tableIsArray(testTable) == true
-		print("tableIsArray_testValueIsArray() passed: " .. tostring(testResult))
+		printResult(testResult, "tableIsArray_testValueIsArray")
 	end
 
-	local function ProductiveWoW_tableIsArray_testValueIsNotArray()
+	function unitTests.ProductiveWoW_tableIsArray_testValueIsNotArray()
 		local testTable = {"A", {}, true, [5] = 2}
 		local testResult = ProductiveWoW_tableIsArray(testTable) == false
-		print("tableIsArray_testValueIsNotArray() passed: " .. tostring(testResult))
+		printResult(testResult, "tableIsArray_testValueIsNotArray")
 	end
 
-	local function ProductiveWoW_tableLength_returnsZeroOnEmptyTable()
+	function unitTests.ProductiveWoW_tableLength_returnsZeroOnEmptyTable()
 		local testTable = {}
 		local tableLength = ProductiveWoW_tableLength(testTable)
 		local testResult = tableLength == 0
-		print("tableLength_returnsZeroOnEmptyTable() passed: " .. tostring(testResult))
+		printResult(testResult, "tableLength_returnsZeroOnEmptyTable")
 	end
 
-	local function ProductiveWoW_tableLength_returnsCorrectCount()
+	function unitTests.ProductiveWoW_tableLength_returnsCorrectCount()
 		local testTable = {1, "A", true, {}}
 		local tableLength = ProductiveWoW_tableLength(testTable)
 		local testResult = tableLength == 4
-		print("tableLength_returnsCorrectCount() passed: " .. tostring(testResult))
+		printResult(testResult, "tableLength_returnsCorrectCount")
 	end
 
-	local function ProductiveWoW_inTableKeys_valueNotInKeys()
+	function unitTests.ProductiveWoW_tableLength_returnsCorrectCountWhenTableHasKeys()
+		local testTable = {["1"] = 1, ["2"] = "A", ["3"] = true, ["4"] = {}}
+		local tableLength = ProductiveWoW_tableLength(testTable)
+		local testResult = tableLength == 4
+		printResult(testResult, "tableLength_returnsCorrectCountWhenTableHasKeys")
+	end
+
+	function unitTests.ProductiveWoW_inTableKeys_valueNotInKeys()
 		local testTable = {[1] = 2, ["A"] = "B"}
-		local testValue = "FAIL"
+		local testValue = "B"
 		local testResult = ProductiveWoW_inTableKeys(testValue, testTable) == false
-		print("inTableKeys_valueNotInKeys() passed: " .. tostring(testResult))
+		printResult(testResult, "inTableKeys_valueNotInKeys")
 	end
 
-	local function ProductiveWoW_inTableKeys_stringValueInKeys()
+	function unitTests.ProductiveWoW_inTableKeys_stringValueInKeys()
 		local testTable = {[1] = 2, ["A"] = "B"}
 		local testValue = "A"
 		local testResult = ProductiveWoW_inTableKeys(testValue, testTable) == true
-		print("inTableKeys_stringValueInKeys() passed: " .. tostring(testResult))
+		printResult(testResult, "inTableKeys_stringValueInKeys")
 	end
 
-	ProductiveWoW_tableIsArray_testValueIsArray()
-	ProductiveWoW_tableIsArray_testValueIsNotArray()
-	ProductiveWoW_tableLength_returnsZeroOnEmptyTable()
-	ProductiveWoW_tableLength_returnsCorrectCount()
-	ProductiveWoW_inTableKeys_valueNotInKeys()
-	ProductiveWoW_inTableKeys_stringValueInKeys()
+	function unitTests.ProductiveWoW_inTable_notInTable()
+		local testTable = {["1"] = "Not", ["2"] = "in", ["3"] = "table"}
+		local testValue = "2"
+		local testResult = ProductiveWoW_inTable(testValue, testTable) == false
+		printResult(testResult, "inTable_notInTable")
+	end
+
+	function unitTests.ProductiveWoW_inTable_stringValueIsInTable()
+		local testTable = {"Not", "in", "table"}
+		local testValue = "in"
+		local testResult = ProductiveWoW_inTable(testValue, testTable) == true
+		printResult(testResult, "inTable_stringValueIsInTable")
+	end
+
+	function unitTests.ProductiveWoW_removeByValue_removesExistingValue()
+	    local tbl = { "apple", "banana", "cherry" }
+	    ProductiveWoW_removeByValue("banana", tbl)
+	    local testResult = (#tbl == 2 and tbl[1] == "apple" and tbl[2] == "cherry")
+	    printResult(testResult, "removeByValue_removesExistingValue()")
+	end
+
+	function unitTests.ProductiveWoW_removeByValue_valueNotFound()
+	    local tbl = { "apple", "banana", "cherry" }
+	    ProductiveWoW_removeByValue("pear", tbl)
+	    local testResult = (#tbl == 3 and tbl[1] == "apple" and tbl[2] == "banana" and tbl[3] == "cherry")
+	    printResult(testResult, "removeByValue_valueNotFound()")
+	end
+
+	function unitTests.ProductiveWoW_removeByValue_removesFirstOnly()
+	    local tbl = { "apple", "banana", "apple", "cherry" }
+	    ProductiveWoW_removeByValue("apple", tbl)
+	    local testResult = (#tbl == 3 and tbl[1] == "banana" and tbl[2] == "apple" and tbl[3] == "cherry")
+	    printResult(testResult, "removeByValue_removesFirstOnly()")
+	end
+
+	function unitTests.ProductiveWoW_removeByValue_emptyTable()
+	    local tbl = {}
+	    ProductiveWoW_removeByValue("apple", tbl)
+	    local testResult = (#tbl == 0)
+	    printResult(testResult, "removeByValue_emptyTable()")
+	end
+
+	function unitTests.ProductiveWoW_removeByValue_numericValues()
+	    local tbl = {1, 2, 3, 4}
+	    ProductiveWoW_removeByValue(3, tbl)
+	    local testResult = (#tbl == 3 and tbl[1] == 1 and tbl[2] == 2 and tbl[3] == 4)
+	    printResult(testResult, "removeByValue_numericValues()")
+	end
+
+	function unitTests.ProductiveWoW_tableShallowCopy_copiesArray()
+	    local original = { "a", "b", "c" }
+	    local copy = ProductiveWoW_tableShallowCopy(original)
+	    local testResult = (#copy == 3 and copy[1] == "a" and copy[2] == "b" and copy[3] == "c")
+	    printResult(testResult, "tableShallowCopy_copiesArray()")
+	end
+
+	function unitTests.ProductiveWoW_tableShallowCopy_copiesKeyedTable()
+	    local original = { x = 10, y = 20 }
+	    local copy = ProductiveWoW_tableShallowCopy(original)
+	    local testResult = (copy.x == 10 and copy.y == 20)
+	    printResult(testResult, "tableShallowCopy_copiesKeyedTable()")
+	end
+
+	function unitTests.ProductiveWoW_tableShallowCopy_independentTopLevelValues()
+	    local original = { a = 1 }
+	    local copy = ProductiveWoW_tableShallowCopy(original)
+	    original.a = 99
+	    local testResult = (copy.a == 1)
+	    printResult(testResult, "tableShallowCopy_independentTopLevelValues()")
+	end
+
+	function unitTests.ProductiveWoW_tableShallowCopy_sharedNestedTables()
+	    local nested = { n = 5 }
+	    local original = { inner = nested }
+	    local copy = ProductiveWoW_tableShallowCopy(original)
+	    nested.n = 99
+	    local testResult = (copy.inner.n == 99)
+	    printResult(testResult, "tableShallowCopy_sharedNestedTables()")
+	end
+
+	function unitTests.ProductiveWoW_tableShallowCopy_emptyTable()
+	    local original = {}
+	    local copy = ProductiveWoW_tableShallowCopy(original)
+	    local testResult = (type(copy) == "table" and next(copy) == nil)
+	    printResult(testResult, "tableShallowCopy_emptyTable()")
+	end
+
+	function unitTests.ProductiveWoW_getKeys_arrayOnly()
+	    local tbl = { "a", "b", "c" }
+	    local keys = ProductiveWoW_getKeys(tbl)
+	    local testResult = areSetsEqual(keys, {1, 2, 3})
+	    printResult(testResult, "getKeys_arrayOnly()")
+	end
+
+	function unitTests.ProductiveWoW_getKeys_keyedOnly()
+	    local tbl = { x = 10, y = 20 }
+	    local keys = ProductiveWoW_getKeys(tbl)
+	    local testResult = areSetsEqual(keys, {"x", "y"})
+	    printResult(testResult, "getKeys_keyedOnly()")
+	end
+
+	function unitTests.ProductiveWoW_getKeys_mixedTable()
+	    local tbl = { "a", "b", x = 99 }
+	    local keys = ProductiveWoW_getKeys(tbl)
+	    local testResult = areSetsEqual(keys, {1, 2, "x"})
+	    printResult(testResult, "getKeys_mixedTable()")
+	end
+
+	function unitTests.ProductiveWoW_getKeys_emptyTable()
+	    local tbl = {}
+	    local keys = ProductiveWoW_getKeys(tbl)
+	    local testResult = (#keys == 0)
+	    printResult(testResult, "getKeys_emptyTable()")
+	end
+
+	function unitTests.ProductiveWoW_getKeys_returnIsArray()
+	    local tbl = { a = 1, b = 2 }
+	    local keys = ProductiveWoW_getKeys(tbl)
+	    local isArray = true
+	    for k, _ in pairs(keys) do
+	        if type(k) ~= "number" then
+	            isArray = false
+	            break
+	        end
+	    end
+	    printResult(isArray, "getKeys_returnIsArray()")
+	end
+
+	function unitTests.ProductiveWoW_mergeTables_concatenatesTwoArrays()
+	    local tbl1 = { "a", "b" }
+	    local tbl2 = { "c", "d" }
+	    local result = ProductiveWoW_mergeTables(tbl1, tbl2)
+	    local testResult = (result == tbl1 and #tbl1 == 4 and tbl1[1] == "a" and tbl1[2] == "b" and tbl1[3] == "c" and tbl1[4] == "d")
+	    printResult(testResult, "mergeTables_concatenatesTwoArrays()")
+	end
+
+	function unitTests.ProductiveWoW_mergeTables_handlesEmptySecond()
+	    local tbl1 = { 1, 2 }
+	    local tbl2 = {}
+	    local result = ProductiveWoW_mergeTables(tbl1, tbl2)
+	    local testResult = (result == tbl1 and #tbl1 == 2 and tbl1[1] == 1 and tbl1[2] == 2)
+	    printResult(testResult, "mergeTables_handlesEmptySecond()")
+	end
+
+	function unitTests.ProductiveWoW_mergeTables_handlesEmptyFirst()
+	    local tbl1 = {}
+	    local tbl2 = { "x", "y" }
+	    local result = ProductiveWoW_mergeTables(tbl1, tbl2)
+	    local testResult = (result == tbl1 and #tbl1 == 2 and tbl1[1] == "x" and tbl1[2] == "y")
+	    printResult(testResult, "mergeTables_handlesEmptyFirst()")
+	end
+
+	function unitTests.ProductiveWoW_mergeTables_bothEmpty()
+	    local tbl1 = {}
+	    local tbl2 = {}
+	    local result = ProductiveWoW_mergeTables(tbl1, tbl2)
+	    local testResult = (result == tbl1 and #tbl1 == 0)
+	    printResult(testResult, "mergeTables_bothEmpty()")
+	end
+
+	function unitTests.ProductiveWoW_mergeTables_preservesSecondTable()
+	    local tbl1 = {1, 2}
+	    local tbl2 = {3, 4}
+	    local result = ProductiveWoW_mergeTables(tbl1, tbl2)
+	    tbl1[1] = 99
+	    local testResult = (result == tbl1 and tbl1[3] == 3 and tbl2[1] == 3 and tbl2[2] == 4)
+	    printResult(testResult, "mergeTables_preservesSecondTable()")
+	end
+
+	function unitTests.ProductiveWoW_mergeTables_worksWithMixedTypes()
+	    local tbl1 = { true, "a" }
+	    local tbl2 = { 5, false }
+	    local result = ProductiveWoW_mergeTables(tbl1, tbl2)
+	    local testResult = (result == tbl1 and tbl1[1] == true and tbl1[2] == "a" and tbl1[3] == 5 and tbl1[4] == false)
+	    printResult(testResult, "mergeTables_worksWithMixedTypes()")
+	end
+
+	function unitTests.ProductiveWoW_getRandomSubsetOfArrayTable_returnsCorrectSize()
+	    local tbl = {1, 2, 3, 4, 5}
+	    local subset = ProductiveWoW_getRandomSubsetOfArrayTable(tbl, 3)
+	    local testResult = (#subset == 3)
+	    printResult(testResult, "getRandomSubsetOfTable_returnsCorrectSize()")
+	end
+
+	function unitTests.ProductiveWoW_getRandomSubsetOfArrayTable_sizeLargerThanTable()
+	    local tbl = {10, 20}
+	    local subset = ProductiveWoW_getRandomSubsetOfArrayTable(tbl, 5)
+	    local testResult = (#subset == 2)
+	    printResult(testResult, "getRandomSubsetOfTable_sizeLargerThanTable()")
+	end
+
+	function unitTests.ProductiveWoW_getRandomSubsetOfArrayTable_emptyTable()
+	    local tbl = {}
+	    local subset = ProductiveWoW_getRandomSubsetOfArrayTable(tbl, 3)
+	    local testResult = (#subset == 0)
+	    printResult(testResult, "getRandomSubsetOfTable_emptyTable()")
+	end
+
+	function unitTests.ProductiveWoW_getRandomSubsetOfArrayTable_sizeZero()
+	    local tbl = { "a", "b" }
+	    local subset = ProductiveWoW_getRandomSubsetOfArrayTable(tbl, 0)
+	    local testResult = (#subset == 0)
+	    printResult(testResult, "getRandomSubsetOfTable_sizeZero()")
+	end
+
+	function unitTests.ProductiveWoW_arrayTablesContainSameElements_sameElementsDifferentOrder()
+	    local tbl1 = {1, 2, 3}
+	    local tbl2 = {3, 1, 2}
+	    local testResult = ProductiveWoW_arrayTablesContainSameElements(tbl1, tbl2) == true
+	    printResult(testResult, "arrayTablesContainSameElements_sameElementsDifferentOrder()")
+	end
+
+	function unitTests.ProductiveWoW_arrayTablesContainSameElements_differentElements()
+	    local tbl1 = {1, 2, 3}
+	    local tbl2 = {4, 5, 6}
+	    local testResult = ProductiveWoW_arrayTablesContainSameElements(tbl1, tbl2) == false
+	    printResult(testResult, "arrayTablesContainSameElements_differentElements()")
+	end
+
+	function unitTests.ProductiveWoW_arrayTablesContainSameElements_differentLengths()
+	    local tbl1 = {1, 2}
+	    local tbl2 = {1, 2, 3}
+	    local testResult = ProductiveWoW_arrayTablesContainSameElements(tbl1, tbl2) == false
+	    printResult(testResult, "arrayTablesContainSameElements_differentLengths()")
+	end
+
+	function unitTests.ProductiveWoW_arrayTablesContainSameElements_identicalTables()
+	    local tbl1 = { "a", "b", "c" }
+	    local tbl2 = { "a", "b", "c" }
+	    local testResult = ProductiveWoW_arrayTablesContainSameElements(tbl1, tbl2) == true
+	    printResult(testResult, "arrayTablesContainSameElements_identicalTables()")
+	end
+
+	function unitTests.ProductiveWoW_arrayTablesContainSameElements_emptyTables()
+	    local tbl1 = {}
+	    local tbl2 = {}
+	    local testResult = ProductiveWoW_arrayTablesContainSameElements(tbl1, tbl2) == true
+	    printResult(testResult, "arrayTablesContainSameElements_emptyTables()")
+	end
+
+	unitTests.ProductiveWoW_tableIsArray_testValueIsArray()
+	unitTests.ProductiveWoW_tableIsArray_testValueIsNotArray()
+	unitTests.ProductiveWoW_tableLength_returnsZeroOnEmptyTable()
+	unitTests.ProductiveWoW_tableLength_returnsCorrectCount()
+	unitTests.ProductiveWoW_tableLength_returnsCorrectCountWhenTableHasKeys()
+	unitTests.ProductiveWoW_inTableKeys_valueNotInKeys()
+	unitTests.ProductiveWoW_inTableKeys_stringValueInKeys()
+	unitTests.ProductiveWoW_inTable_notInTable()
+	unitTests.ProductiveWoW_inTable_stringValueIsInTable()
+	unitTests.ProductiveWoW_removeByValue_removesExistingValue()
+	unitTests.ProductiveWoW_removeByValue_valueNotFound()
+	unitTests.ProductiveWoW_removeByValue_removesFirstOnly()
+	unitTests.ProductiveWoW_removeByValue_emptyTable()
+	unitTests.ProductiveWoW_removeByValue_numericValues()
+	unitTests.ProductiveWoW_tableShallowCopy_copiesArray()
+	unitTests.ProductiveWoW_tableShallowCopy_copiesKeyedTable()
+	unitTests.ProductiveWoW_tableShallowCopy_independentTopLevelValues()
+	unitTests.ProductiveWoW_tableShallowCopy_sharedNestedTables()
+	unitTests.ProductiveWoW_tableShallowCopy_emptyTable()
+	unitTests.ProductiveWoW_getKeys_arrayOnly()
+	unitTests.ProductiveWoW_getKeys_keyedOnly()
+	unitTests.ProductiveWoW_getKeys_mixedTable()
+	unitTests.ProductiveWoW_getKeys_emptyTable()
+	unitTests.ProductiveWoW_getKeys_returnIsArray()
+	unitTests.ProductiveWoW_mergeTables_concatenatesTwoArrays()
+	unitTests.ProductiveWoW_mergeTables_handlesEmptySecond()
+	unitTests.ProductiveWoW_mergeTables_handlesEmptyFirst()
+	unitTests.ProductiveWoW_mergeTables_bothEmpty()
+	unitTests.ProductiveWoW_mergeTables_preservesSecondTable()
+	unitTests.ProductiveWoW_mergeTables_worksWithMixedTypes()
+	unitTests.ProductiveWoW_getRandomSubsetOfArrayTable_returnsCorrectSize()
+	unitTests.ProductiveWoW_getRandomSubsetOfArrayTable_sizeLargerThanTable()
+	unitTests.ProductiveWoW_getRandomSubsetOfArrayTable_emptyTable()
+	unitTests.ProductiveWoW_getRandomSubsetOfArrayTable_sizeZero()
+	unitTests.ProductiveWoW_arrayTablesContainSameElements_sameElementsDifferentOrder()
+	unitTests.ProductiveWoW_arrayTablesContainSameElements_differentElements()
+	unitTests.ProductiveWoW_arrayTablesContainSameElements_differentLengths()
+	unitTests.ProductiveWoW_arrayTablesContainSameElements_identicalTables()
+	unitTests.ProductiveWoW_arrayTablesContainSameElements_emptyTables()
 
 end

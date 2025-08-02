@@ -1,4 +1,6 @@
 -- v1.3
+-- NOTE: To access the WoW Frame you must reference it like this <name of ProductiveWoW Frame>.Frame (e.g. flashcardFrame.Frame)
+-- For example, to be able to resize, flashcardFrame.Frame:SetSize(width, height)
 
 -- INITIALIZE VARIABLES
 --------------------------------------------------------------------------------------------------------------------------------
@@ -48,6 +50,7 @@ INPUT_BUTTONS.MOUSE_RIGHT = "RightButton"
 INPUT_BUTTONS.MOUSE_LEFT = "LeftButton"
 -- Events
 local EVENTS = {}
+EVENTS.ON_EVENT = "OnEvent" -- On any event
 EVENTS.ON_MOUSE_DRAG_START = "OnDragStart"
 EVENTS.ON_MOUSE_DRAG_STOP = "OnDragStop"
 EVENTS.ON_CLICK = "OnClick"
@@ -60,7 +63,10 @@ EVENTS.ON_SHOW = "OnShow"
 EVENTS.ON_HIDE = "OnHide"
 EVENTS.ON_ENTER = "OnEnter" -- When cursor enters the bounds of a frame
 EVENTS.ON_LEAVE = "OnLeave" -- When cursor leaves the bounds of a frame
-
+EVENTS.PLAYER_CONTROL_LOST = "PLAYER_CONTROL_LOST" -- Used in conjunction with UnitOnTaxi() to determine when you take a flight path
+-- Units
+local UNIT_CONSTANTS = {}
+UNIT_CONSTANTS.PLAYER = "player"
 
 -- Variables for all frames
 local ProductiveWoWAllFrames = {} -- Keep track of list of all frames
@@ -79,7 +85,7 @@ commonFrameAttributes.basicButtonWidth = 100
 commonFrameAttributes.basicButtonHeight = 30
 
 -- Main menu frame
-local mainMenu = {}
+local mainMenu = {} -- We register events to the main menu frame
 mainMenu.frameName = "MainMenuFrame"
 mainMenu.frameTitle = ProductiveWoW_ADDON_NAME .. " " .. ProductiveWoW_ADDON_VERSION
 -- Main menu choose deck text
@@ -492,6 +498,8 @@ flashcardFrame.navigateBackToMainMenuButtonSound = SOUNDKIT.IG_CHARACTER_INFO_CL
 local deckSettingsFrame = {}
 deckSettingsFrame.frameName = "DeckSettingsFrame"
 deckSettingsFrame.titlePrefix = "Deck Settings - "
+deckSettingsFrame.width = commonFrameAttributes.basicFrameWidth + 100
+deckSettingsFrame.height = commonFrameAttributes.basicFrameHeight + 50
 -- Back to modify deck frame button
 deckSettingsFrame.navigateBackToModifyDeckFrameButtonName = "NavigateBackToModifyDeckFromDeckSettings"
 deckSettingsFrame.navigateBackToModifyDeckFrameButtonText = "Back"
@@ -845,6 +853,9 @@ end
 
 -- Configure the main menu frame
 local function configureMainMenuFrame()
+	-- Register for events related to reminders to complete flashcards
+	mainMenu.Frame:RegisterEvent(EVENTS.PLAYER_CONTROL_LOST)
+
 	-- Choose deck text
 	mainMenu.chooseDeckText = createText(mainMenu.chooseDeckTextAnchor, mainMenu.Frame, mainMenu.chooseDeckTextParentAnchor, mainMenu.chooseDeckTextXOffset, mainMenu.chooseDeckTextYOffset, mainMenu.chooseDeckTextValue)
 
@@ -930,6 +941,15 @@ local function configureMainMenuFrame()
 
 	-- Navigate to addon settings frame button
 	mainMenu.navigateToAddonSettingsButton = createNavigationButton(mainMenu.navigateToAddonSettingsButtonName, mainMenu.Frame, mainMenu.navigateToAddonSettingsButtonText, mainMenu.navigateToAddonSettingsButtonAnchor, mainMenu.navigateToAddonSettingsButtonXOffset, mainMenu.navigateToAddonSettingsButtonYOffset, addonSettingsFrame.Frame)
+
+	-- Handle events related to reminders
+	mainMenu.Frame:SetScript(EVENTS.ON_EVENT, function(self, event, ...)
+		if event == EVENTS.PLAYER_CONTROL_LOST then
+			if UnitOnTaxi(UNIT_CONSTANTS.PLAYER) and ProductiveWoW_anyReminderOnFlightPath() == true then
+				ProductiveWoW_sendDeckReminderOnFlightPathTaken()
+			end
+		end
+	end)
 end
 
 -- Configure create deck frame
@@ -1171,7 +1191,7 @@ local function configureModifyDeckFrame()
 				modifyDeckFrame.refreshListOfCards()
 			end
 		elseif modifyDeckFrame.searchActive == true then
-			modifyDeckFrame.searchResultsCardIds = ProductiveWoW_removeFromArrayMaintainOrdering(modifyDeckFrame.searchResultsCardIds, cardId)
+			ProductiveWoW_removeByValue(cardId, modifyDeckFrame.searchResultsCardIds)
 			modifyDeckFrame.unselectAllRows()
 			modifyDeckFrame.populateRows(modifyDeckFrame.currentPageIndex, modifyDeckFrame.searchResultsCardIds)
 		end
@@ -1519,6 +1539,9 @@ end
 
 -- Configure deck settings frame
 local function configureDeckSettingsFrame()
+	-- Resize to accomodate all settings
+	deckSettingsFrame.Frame:SetSize(deckSettingsFrame.width, deckSettingsFrame.height)
+
 	-- Back button
 	deckSettingsFrame.navigateBackToModifyDeckFrameButton = createNavigationButton(deckSettingsFrame.navigateBackToModifyDeckFrameButtonName, deckSettingsFrame.Frame, deckSettingsFrame.navigateBackToModifyDeckFrameButtonText, deckSettingsFrame.navigateBackToModifyDeckFrameButtonAnchor, deckSettingsFrame.navigateBackToModifyDeckFrameButtonXOffset, deckSettingsFrame.navigateBackToModifyDeckFrameButtonYOffset, modifyDeckFrame.Frame, deckSettingsFrame.navigateBackToModifyDeckFrameButtonSound)
 
@@ -1527,6 +1550,8 @@ local function configureDeckSettingsFrame()
 
 	-- Max daily cards textbox
 	deckSettingsFrame.maxCardsTextBox = createTextBox(deckSettingsFrame.maxCardsTextBoxName, deckSettingsFrame.Frame, deckSettingsFrame.maxCardsTextBoxWidth, deckSettingsFrame.maxCardsTextBoxHeight, deckSettingsFrame.maxCardsTextBoxAnchor, deckSettingsFrame.maxCardsTextBoxXOffset, deckSettingsFrame.maxCardsTextBoxYOffset)
+
+	-- 
 
 	-- Save button
 	function deckSettingsFrame.saveDeckSettingsButtonOnClick()

@@ -51,38 +51,17 @@ function ProductiveWoW_inTable(valueToCheck, tbl)
 	return false
 end
 
--- Remove an element from an array by value
+-- Remove an element from an array by value, removes first only, modifies table in place
 function ProductiveWoW_removeByValue(value, tbl)
 	if not ProductiveWoW_tableIsArray(tbl) then
 		error("Table has to be an array-type table.")
 	end
-	for i = #tbl, 1, -1 do
+	for i = 1, #tbl, 1 do
 		if (tbl[i] == value) then
 			table.remove(tbl, i)
+			return
 		end
 	end
-end
-
--- Remove a value from an array table while maintaining original ordering
-function ProductiveWoW_removeFromArrayMaintainOrdering(arrayTable, valueToRemove)
-	local tempTable = {}
-	for i, val in ipairs(arrayTable) do
-		if val ~= valueToRemove then
-			table.insert(tempTable, val)
-		end
-	end
-	return tempTable
-end
-
--- Remove an index from an array table while maintaining original ordering
-function ProductiveWoW_removeFromArrayByIndexMaintainOrdering(arrayTable, indexToRemove)
-	local tempTable = {}
-	for i, val in ipairs(arrayTable) do
-		if i ~= indexToRemove then
-			table.insert(tempTable, val)
-		end
-	end
-	return tempTable
 end
 
 -- Shallow copy of a table, does not copy nested tables
@@ -103,7 +82,7 @@ function ProductiveWoW_getKeys(tbl)
 	return keys
 end
 
--- Merge 2 tables that are arrays
+-- Returns table1 with table2 concatenated to it
 function ProductiveWoW_mergeTables(tbl1, tbl2)
 	if ProductiveWoW_tableIsArray(tbl1) and ProductiveWoW_tableIsArray(tbl2) then
 		for i, val in ipairs(tbl2) do
@@ -113,15 +92,15 @@ function ProductiveWoW_mergeTables(tbl1, tbl2)
 	end
 end
 
--- Get random subset of size n from table
-function ProductiveWoW_getRandomSubsetOfTable(tbl, size)
+-- Get random subset of size n from array-type table
+function ProductiveWoW_getRandomSubsetOfArrayTable(tbl, size)
 	if ProductiveWoW_tableLength(tbl) >= size then
 		local tempTable = ProductiveWoW_tableShallowCopy(tbl)
 		local subset = {}
 		while size ~= 0 do
 			local randomIndex = math.random(1, size)
 			table.insert(subset, tempTable[randomIndex])
-			tempTable = ProductiveWoW_removeFromArrayByIndexMaintainOrdering(tempTable, randomIndex)
+			table.remove(tempTable, randomIndex)
 			size = size - 1
 		end
 		return subset
@@ -134,12 +113,12 @@ function ProductiveWoW_arrayTablesContainSameElements(arrayTable1, arrayTable2)
 	if not ProductiveWoW_tableIsArray(arrayTable1) or not ProductiveWoW_tableIsArray(arrayTable2) then
 		error("One or both inputs are not array-type tables.")
 	end
+	local count = 0
 	if ProductiveWoW_tableLength(arrayTable1) ~= ProductiveWoW_tableLength(arrayTable2) then
 		return false
 	else
-		local count = 0
 		for i, val1 in ipairs(arrayTable1) do
-			for j, val2 in arrayTable2 do
+			for j, val2 in ipairs(arrayTable2) do
 				if val1 == val2 then
 					count = count + 1
 				end
