@@ -1,4 +1,4 @@
--- v1.3
+-- v1.3.1
 
 -- DEV AND DEBUG ONLY --
 local resetSavedVariables = false -- Reset ProductiveWoWData and ProductiveWoWSavedSettings
@@ -9,7 +9,7 @@ local runUnitTests = false
 -- GLOBALS --
 --------------------------------------------------------------------------------------------------------------------------------
 ProductiveWoW_ADDON_NAME = "ProductiveWoW"
-ProductiveWoW_ADDON_VERSION = "v1.3"
+ProductiveWoW_ADDON_VERSION = "v1.3.1"
 
 
 -- CONSTANTS --
@@ -21,12 +21,17 @@ local NEW_DECK_DATE = date("*t", time() - 180000) -- About 2 days before today. 
 local ALL_CARDS = -1 -- Test on all cards per day
 local DEFAULT_ROW_SCALE = 0.5 -- 50% of max allowed row scale
 local DEFAULT_FLASHCARD_FONT_SIZE = 12
+local FLASHCARD_DEFAULT_WIDTH = 450
+local FLASHCARD_DEFAULT_HEIGHT = 250
 local REMINDER_SOUND = SOUNDKIT.TELL_MESSAGE
 -- All variables with _KEY contain the string value used as the key in some table
 local DECKS_KEY = "decks"
+local ADDON_VERSION_KEY = "addon version"
 local CURRENTLY_SELECTED_DECK_KEY = "currently selected deck"
 local ROW_SCALE_KEY = "row scale"
 local FLASHCARD_FONT_SIZE_KEY = "flashcard font size"
+local FLASHCARD_WIDTH_KEY = "flashcard width"
+local FLASHCARD_HEIGHT_KEY = "flashcard height"
 local REMINDER_ON_FLIGHT_PATH_KEY = "reminder on flight path"
 local CARDS_KEY = "cards"
 local QUESTION_KEY = "question"
@@ -67,7 +72,12 @@ local timeWhenDeckCanBePlayedAgain = 10 -- Each new day, the deck can be played 
 
 -- OTHER --
 --------------------------------------------------------------------------------------------------------------------------------
-local savedSettingsTableInitialValues = {[CURRENTLY_SELECTED_DECK_KEY] = nil, [ROW_SCALE_KEY] = DEFAULT_ROW_SCALE, [FLASHCARD_FONT_SIZE_KEY] = DEFAULT_FLASHCARD_FONT_SIZE}
+local savedSettingsTableInitialValues = {[ADDON_VERSION_KEY] = ProductiveWoW_ADDON_VERSION,
+										 [CURRENTLY_SELECTED_DECK_KEY] = nil,
+										 [ROW_SCALE_KEY] = DEFAULT_ROW_SCALE,
+									     [FLASHCARD_FONT_SIZE_KEY] = DEFAULT_FLASHCARD_FONT_SIZE,
+									     [FLASHCARD_WIDTH_KEY] = FLASHCARD_DEFAULT_WIDTH,
+									 	 [FLASHCARD_HEIGHT_KEY] = FLASHCARD_DEFAULT_HEIGHT}
 local dataTableInitialValues = {[DECKS_KEY] = {}}
 
 
@@ -147,9 +157,16 @@ function ProductiveWoW_getDeckDailyNumberOfCards(deckName)
 	return ProductiveWoW_getDeck(deckName)[DAILY_NUMBER_OF_CARDS_KEY]
 end
 
+-- Get deck started today yet flag
+function ProductiveWoW_getDeckStartedToday(deckName)
+	return ProductiveWoW_getDeck(deckName)[STARTED_TODAY_KEY]
+end
+
 -- Get deck list of remaining cards to be tested today
 function ProductiveWoW_getDeckListOfRemainingCardsToday(deckName)
-	return ProductiveWoW_getDeck(deckName)[LIST_OF_CARDS_REMAINING_TODAY_KEY]
+	local remainingCards = ProductiveWoW_getDeck(deckName)[LIST_OF_CARDS_REMAINING_TODAY_KEY]
+	-- Return copy of the table rather than reference to it
+	return ProductiveWoW_tableShallowCopy(remainingCards)
 end
 
 -- Get card by ID
@@ -236,6 +253,11 @@ local function getCardIdsByDifficulty(deckName, difficulty)
 	return cardIds
 end
 
+-- Get Saved Settings addon version
+function ProductiveWoW_getSavedSettingsAddonVersion()
+	return ProductiveWoWSavedSettings[ADDON_VERSION_KEY]
+end
+
 -- Get Saved Settings row scale value
 function ProductiveWoW_getSavedSettingsRowScale()
 	return ProductiveWoWSavedSettings[ROW_SCALE_KEY]
@@ -244,6 +266,16 @@ end
 -- Get Saved Settings flashcard font size value
 function ProductiveWoW_getSavedSettingsFlashcardFontSize()
 	return ProductiveWoWSavedSettings[FLASHCARD_FONT_SIZE_KEY]
+end
+
+-- Get Saved Settings flashcard width value
+function ProductiveWoW_getSavedSettingsFlashcardWidth()
+	return ProductiveWoWSavedSettings[FLASHCARD_WIDTH_KEY]
+end
+
+-- Get Saved Settings flashcard height value
+function ProductiveWoW_getSavedSettingsFlashcardHeight()
+	return ProductiveWoWSavedSettings[FLASHCARD_HEIGHT_KEY]
 end
 
 -- Get deck reminder on flight path taken true/false
@@ -349,6 +381,11 @@ function ProductiveWoW_setCardAnswer(deckName, cardId, answer)
 	ProductiveWoW_getCardByID(deckName, cardId)[ANSWER_KEY] = answer
 end
 
+-- Set Saved Settings addon version
+function ProductiveWoW_setSavedSettingsAddonVersion(newVersion)
+	ProductiveWoWSavedSettings[ADDON_VERSION_KEY] = newVersion
+end
+
 -- Set Saved Settings row scale value
 function ProductiveWoW_setSavedSettingsRowScale(newRowScale)
 	ProductiveWoWSavedSettings[ROW_SCALE_KEY] = newRowScale
@@ -357,6 +394,16 @@ end
 -- Set Saved Settings flashcard font size value
 function ProductiveWoW_setSavedSettingsFlashcardFontSize(newFontSize)
 	ProductiveWoWSavedSettings[FLASHCARD_FONT_SIZE_KEY] = newFontSize
+end
+
+-- Set Saved Settings flashcard width value
+function ProductiveWoW_setSavedSettingsFlashcardWidth(newWidth)
+	ProductiveWoWSavedSettings[FLASHCARD_WIDTH_KEY] = newWidth
+end
+
+-- Set Saved Settings flashcard height value
+function ProductiveWoW_setSavedSettingsFlashcardHeight(newHeight)
+	ProductiveWoWSavedSettings[FLASHCARD_HEIGHT_KEY] = newHeight
 end
 
 -- DECK FUNCTIONS --
@@ -406,17 +453,22 @@ end
 
 -- Check if this is the first time playing the deck today
 function ProductiveWoW_isDeckNotPlayedYetToday(deckName)
-	local deck = ProductiveWoW_getDeck(deckName)
-	local currentDate = date("*t")
-	local daysSinceLastPlayed = ProductiveWoW_numberOfDaysSinceDate(deck[DATE_LAST_PLAYED_KEY])
-	if daysSinceLastPlayed >= 1 then
+	-- If flag is explicitly false then it's already determined to be not played yet today
+	if ProductiveWoW_getDeckStartedToday(deckName) == false then
 		return true
+	else
+		local deck = ProductiveWoW_getDeck(deckName)
+		local currentDate = date("*t")
+		local daysSinceLastPlayed = ProductiveWoW_numberOfDaysSinceDate(deck[DATE_LAST_PLAYED_KEY])
+		if daysSinceLastPlayed >= 1 then
+			return true
+		end
+		-- Check for case when daysSinceLastPlayed is 0 as in 24h have not passed yet, but it is the next day, will reset it at 10am
+		if currentDate[DAY_KEY] - deck[DATE_LAST_PLAYED_KEY][DAY_KEY] == 1 and currentDate[HOUR_KEY] >= timeWhenDeckCanBePlayedAgain then
+			return true
+		end
+		return false
 	end
-	-- Check for case when daysSinceLastPlayed is 0 as in 24h have not passed yet, but it is the next day, will reset it at 10am
-	if currentDate[DAY_KEY] - deck[DATE_LAST_PLAYED_KEY][DAY_KEY] == 1 and currentDate[HOUR_KEY] >= timeWhenDeckCanBePlayedAgain then
-		return true
-	end
-	return false
 end
 
 -- Check if deck has been completed today
@@ -525,30 +577,34 @@ end
 
 -- Increment the views of a card
 function ProductiveWoW_onViewedCard(cardId)
+	local deckName = ProductiveWoW_getCurrentDeckName()
 	local card = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(cardId)
-	card[NUMBER_OF_TIMES_PLAYED_KEY] = card[NUMBER_OF_TIMES_PLAYED_KEY] + 1
-	ProductiveWoW_setCardDateLastPlayed(ProductiveWoW_getCurrentDeckName(), cardId, date("*t"))
+	card[NUMBER_OF_TIMES_PLAYED_KEY] = ProductiveWoW_getCardNumberOfTimesPlayed(deckName, cardId) + 1
+	ProductiveWoW_setCardDateLastPlayed(deckName, cardId, date("*t"))
 end
 
 -- Card was easy
 function ProductiveWoW_cardEasyDifficultyChosen(cardId)
+	local deckName = ProductiveWoW_getCurrentDeckName()
 	local card = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(cardId)
-	card[NUMBER_OF_TIMES_EASY_KEY] = card[NUMBER_OF_TIMES_EASY_KEY] + 1
-	ProductiveWoW_setCardDifficulty(ProductiveWoW_getCurrentDeckName(), cardId, EASY)
+	card[NUMBER_OF_TIMES_EASY_KEY] = ProductiveWoW_getCardNumberOfTimesEasy(deckName, cardId) + 1
+	ProductiveWoW_setCardDifficulty(deckName, cardId, EASY)
 end
 
 -- Card was medium difficulty
 function ProductiveWoW_cardMediumDifficultyChosen(cardId)
+	local deckName = ProductiveWoW_getCurrentDeckName()
 	local card = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(cardId)
-	card[NUMBER_OF_TIMES_MEDIUM_KEY] = card[NUMBER_OF_TIMES_MEDIUM_KEY] + 1
-	ProductiveWoW_setCardDifficulty(ProductiveWoW_getCurrentDeckName(), cardId, MEDIUM)
+	card[NUMBER_OF_TIMES_MEDIUM_KEY] = ProductiveWoW_getCardNumberOfTimesMedium(deckName, cardId) + 1
+	ProductiveWoW_setCardDifficulty(deckName, cardId, MEDIUM)
 end
 
 -- Card was easy
 function ProductiveWoW_cardHardDifficultyChosen(cardId)
+	local deckName = ProductiveWoW_getCurrentDeckName()
 	local card = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(cardId)
-	card[NUMBER_OF_TIMES_HARD_KEY] = card[NUMBER_OF_TIMES_HARD_KEY] + 1
-	ProductiveWoW_setCardDifficulty(ProductiveWoW_getCurrentDeckName(), cardId, HARD)
+	card[NUMBER_OF_TIMES_HARD_KEY] = ProductiveWoW_getCardNumberOfTimesHard(deckName, cardId) + 1
+	ProductiveWoW_setCardDifficulty(deckName, cardId, HARD)
 end
 
 
@@ -629,8 +685,6 @@ local function getDeckSubsetForQuiz()
 			end
 		end
 	end
-	-- User has already started playing the deck today so return cards remaining
-	return ProductiveWoW_getDeckListOfRemainingCardsToday(currentDeckName)
 end
 
 -- Draw random next card
@@ -652,10 +706,13 @@ end
 -- Begin quiz
 function ProductiveWoW_beginQuiz()
 	local currentDeckName = ProductiveWoW_getCurrentDeckName()
-	-- Load the subset of cards to be quizzed on
-	ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs = getDeckSubsetForQuiz()
 	if ProductiveWoW_isDeckNotPlayedYetToday(currentDeckName) then
+		-- Load the subset of cards to be quizzed on if not yet started deck today
+		ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs = getDeckSubsetForQuiz()
 		setDeckStartedToday(currentDeckName, ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs)
+	else
+		-- Pick up where you left off today, for example if you had 10 cards to do today, you did 3 of them in the deck, logged off, logged back in, you'd still have 7 cards left to do
+		ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs = ProductiveWoW_getDeckListOfRemainingCardsToday(currentDeckName)
 	end
 	ProductiveWoW_drawRandomNextCard()
 end
@@ -671,6 +728,13 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 	if resetSavedVariables == true then
 		ProductiveWoWSavedSettings = {[CURRENTLY_SELECTED_DECK_KEY] = nil}
 		ProductiveWoWData = {[DECKS_KEY] = {}}
+	end
+
+	-- Print changelog message for newly installed version when user runs one of the slash commands
+	local userJustUpdatedToNewVersionOfAddon = false
+	if ProductiveWoW_getSavedSettingsAddonVersion() == nil or ProductiveWoW_getSavedSettingsAddonVersion() ~= ProductiveWoW_ADDON_VERSION then
+		userJustUpdatedToNewVersionOfAddon = true
+		ProductiveWoW_setSavedSettingsAddonVersion(ProductiveWoW_ADDON_VERSION)
 	end
 
 	-- Update saved variables tables with any new keys that were added in subsequent versions of the addon
@@ -697,10 +761,29 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 			ProductiveWoW_hideAllFrames()
 		else
 			ProductiveWoW_showMainMenu()
+			-- Print changelog message for newer versions of the addon just being installed
+			if userJustUpdatedToNewVersionOfAddon == true then
+				print("ProductiveWoW what's new in version " .. ProductiveWoW_ADDON_VERSION .. ": Added the ability to change the flashcard frame's width and height through the Settings button.")
+			end
 		end
 	end
 
 end)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 -- UNIT TESTS --
@@ -708,6 +791,8 @@ end)
 
 local unitTests = {}
 if runUnitTests == true then
+
+	local anyFailed = false
 
 	local function toRedText(text)
 		return "|cFFFF0000" .. text .. "|r"
@@ -722,6 +807,7 @@ if runUnitTests == true then
 		if testResult == true then
 			print(toGreenText(text))
 		else
+			anyFailed = true
 			print(toRedText(text))
 		end
 	end
@@ -735,6 +821,8 @@ if runUnitTests == true then
 	    end
 	    return true
 	end
+
+	-- God bless chatGPT
 
 	-- ProductiveWoWUtilities.lua Unit Tests --
 	function unitTests.ProductiveWoW_tableIsArray_testValueIsArray()
@@ -1024,6 +1112,164 @@ if runUnitTests == true then
 	    printResult(testResult, "arrayTablesContainSameElements_emptyTables()")
 	end
 
+	function unitTests.ProductiveWoW_stringContainsOnlyWhitespace_spacesOnly()
+	    local str = "     "
+	    local testResult = ProductiveWoW_stringContainsOnlyWhitespace(str) == true
+	    printResult(testResult, "stringContainsOnlyWhitespace_spacesOnly()")
+	end
+
+	function unitTests.ProductiveWoW_stringContainsOnlyWhitespace_tabsAndNewlines()
+	    local str = "\t\n  \n\t"
+	    local testResult = ProductiveWoW_stringContainsOnlyWhitespace(str) == true
+	    printResult(testResult, "stringContainsOnlyWhitespace_tabsAndNewlines()")
+	end
+
+	function unitTests.ProductiveWoW_stringContainsOnlyWhitespace_emptyString()
+	    local str = ""
+	    local testResult = ProductiveWoW_stringContainsOnlyWhitespace(str) == true
+	    printResult(testResult, "stringContainsOnlyWhitespace_emptyString()")
+	end
+
+	function unitTests.ProductiveWoW_stringContainsOnlyWhitespace_containsVisibleCharacters()
+	    local str = "  a  "
+	    local testResult = ProductiveWoW_stringContainsOnlyWhitespace(str) == false
+	    printResult(testResult, "stringContainsOnlyWhitespace_containsVisibleCharacters()")
+	end
+
+	function unitTests.ProductiveWoW_stringContainsOnlyWhitespace_mixedContent()
+	    local str = "\n\tword\t\n"
+	    local testResult = ProductiveWoW_stringContainsOnlyWhitespace(str) == false
+	    printResult(testResult, "stringContainsOnlyWhitespace_mixedContent()")
+	end
+
+	function unitTests.ProductiveWoW_isNumeric_pureDigits()
+	    local str = "123456"
+	    local testResult = ProductiveWoW_isNumeric(str) == true
+	    printResult(testResult, "isNumeric_pureDigits()")
+	end
+
+	function unitTests.ProductiveWoW_isNumeric_leadingZeros()
+	    local str = "00042"
+	    local testResult = ProductiveWoW_isNumeric(str) == true
+	    printResult(testResult, "isNumeric_leadingZeros()")
+	end
+
+	function unitTests.ProductiveWoW_isNumeric_emptyString()
+	    local str = ""
+	    local testResult = ProductiveWoW_isNumeric(str) == false
+	    printResult(testResult, "isNumeric_emptyString()")
+	end
+
+	function unitTests.ProductiveWoW_isNumeric_containsLetters()
+	    local str = "12a34"
+	    local testResult = ProductiveWoW_isNumeric(str) == false
+	    printResult(testResult, "isNumeric_containsLetters()")
+	end
+
+	function unitTests.ProductiveWoW_isNumeric_negativeSign()
+	    local str = "-123"
+	    local testResult = ProductiveWoW_isNumeric(str) == false
+	    printResult(testResult, "isNumeric_negativeSign()")
+	end
+
+	function unitTests.ProductiveWoW_isNumeric_decimalNumber()
+	    local str = "3.14"
+	    local testResult = ProductiveWoW_isNumeric(str) == false
+	    printResult(testResult, "isNumeric_decimalNumber()")
+	end
+
+	function unitTests.ProductiveWoW_isNumeric_whitespaceAroundDigits()
+	    local str = " 123 "
+	    local testResult = ProductiveWoW_isNumeric(str) == false
+	    printResult(testResult, "isNumeric_whitespaceAroundDigits()")
+	end
+
+	function unitTests.ProductiveWoW_isPercent_wholeNumber()
+	    local str = "75"
+	    local testResult = ProductiveWoW_isPercent(str) == true
+	    printResult(testResult, "isPercent_wholeNumber()")
+	end
+
+	function unitTests.ProductiveWoW_isPercent_validPercentage()
+	    local str = "25%"
+	    local testResult = ProductiveWoW_isPercent(str) == true
+	    printResult(testResult, "isPercent_validPercentage()")
+	end
+
+	function unitTests.ProductiveWoW_isPercent_decimalNumber()
+	    local str = "3.14"
+	    local testResult = ProductiveWoW_isPercent(str) == false
+	    printResult(testResult, "isPercent_decimalNumber()")
+	end
+
+	function unitTests.ProductiveWoW_isPercent_decimalWithPercent()
+	    local str = "3.14%"
+	    local testResult = ProductiveWoW_isPercent(str) == false
+	    printResult(testResult, "isPercent_decimalWithPercent()")
+	end
+
+	function unitTests.ProductiveWoW_isPercent_emptyString()
+	    local str = ""
+	    local testResult = ProductiveWoW_isPercent(str) == false
+	    printResult(testResult, "isPercent_emptyString()")
+	end
+
+	function unitTests.ProductiveWoW_isPercent_lettersInString()
+	    local str = "abc"
+	    local testResult = ProductiveWoW_isPercent(str) == false
+	    printResult(testResult, "isPercent_lettersInString()")
+	end
+
+	function unitTests.ProductiveWoW_isPercent_onlyPercentSymbol()
+	    local str = "%"
+	    local testResult = ProductiveWoW_isPercent(str) == false
+	    printResult(testResult, "isPercent_onlyPercentSymbol()")
+	end
+
+	function unitTests.ProductiveWoW_isPercent_percentWithSpaces()
+	    local str = " 50% "
+	    local testResult = ProductiveWoW_isPercent(str) == false
+	    printResult(testResult, "isPercent_percentWithSpaces()")
+	end
+
+	function unitTests.ProductiveWoW_isPercent_multiplePercentSymbols()
+	    local str = "50%%"
+	    local testResult = ProductiveWoW_isPercent(str) == false
+	    printResult(testResult, "isPercent_multiplePercentSymbols()")
+	end
+
+	function unitTests.ProductiveWoW_numberOfDaysSinceDate_todayIsZero()
+	    local today = date("*t")
+	    local testResult = ProductiveWoW_numberOfDaysSinceDate(today) == 0
+	    printResult(testResult, "numberOfDaysSinceDate_todayIsZero()")
+	end
+
+	function unitTests.ProductiveWoW_numberOfDaysSinceDate_oneDayAgo()
+	    local yesterday = date("*t", time() - 86400)
+	    local testResult = ProductiveWoW_numberOfDaysSinceDate(yesterday) == 1
+	    printResult(testResult, "numberOfDaysSinceDate_oneDayAgo()")
+	end
+
+	function unitTests.ProductiveWoW_numberOfDaysSinceDate_sevenDaysAgo()
+	    local past = date("*t", time() - 86400 * 7)
+	    local testResult = ProductiveWoW_numberOfDaysSinceDate(past) == 7
+	    printResult(testResult, "numberOfDaysSinceDate_sevenDaysAgo()")
+	end
+
+	function unitTests.ProductiveWoW_numberOfDaysSinceDate_leapYearCheck()
+	    local leapDay = { year = 2020, month = 2, day = 29 }
+	    local now = date("*t")
+	    local expectedDays = math.floor((time(now) - time(leapDay)) / 86400)
+	    local testResult = ProductiveWoW_numberOfDaysSinceDate(leapDay) == expectedDays
+	    printResult(testResult, "numberOfDaysSinceDate_leapYearCheck()")
+	end
+
+	function unitTests.ProductiveWoW_numberOfDaysSinceDate_futureDate()
+	    local future = date("*t", time() + 86400 * 5)
+	    local testResult = ProductiveWoW_numberOfDaysSinceDate(future) == -5
+	    printResult(testResult, "numberOfDaysSinceDate_futureDate()")
+	end
+
 	unitTests.ProductiveWoW_tableIsArray_testValueIsArray()
 	unitTests.ProductiveWoW_tableIsArray_testValueIsNotArray()
 	unitTests.ProductiveWoW_tableLength_returnsZeroOnEmptyTable()
@@ -1063,5 +1309,35 @@ if runUnitTests == true then
 	unitTests.ProductiveWoW_arrayTablesContainSameElements_differentLengths()
 	unitTests.ProductiveWoW_arrayTablesContainSameElements_identicalTables()
 	unitTests.ProductiveWoW_arrayTablesContainSameElements_emptyTables()
+	unitTests.ProductiveWoW_stringContainsOnlyWhitespace_spacesOnly()
+	unitTests.ProductiveWoW_stringContainsOnlyWhitespace_tabsAndNewlines()
+	unitTests.ProductiveWoW_stringContainsOnlyWhitespace_emptyString()
+	unitTests.ProductiveWoW_stringContainsOnlyWhitespace_containsVisibleCharacters()
+	unitTests.ProductiveWoW_stringContainsOnlyWhitespace_mixedContent()
+	unitTests.ProductiveWoW_isNumeric_pureDigits()
+	unitTests.ProductiveWoW_isNumeric_leadingZeros()
+	unitTests.ProductiveWoW_isNumeric_emptyString()
+	unitTests.ProductiveWoW_isNumeric_containsLetters()
+	unitTests.ProductiveWoW_isNumeric_negativeSign()
+	unitTests.ProductiveWoW_isNumeric_decimalNumber()
+	unitTests.ProductiveWoW_isNumeric_whitespaceAroundDigits()
+	unitTests.ProductiveWoW_isPercent_wholeNumber()
+	unitTests.ProductiveWoW_isPercent_validPercentage()
+	unitTests.ProductiveWoW_isPercent_decimalNumber()
+	unitTests.ProductiveWoW_isPercent_decimalWithPercent()
+	unitTests.ProductiveWoW_isPercent_emptyString()
+	unitTests.ProductiveWoW_isPercent_lettersInString()
+	unitTests.ProductiveWoW_isPercent_onlyPercentSymbol()
+	unitTests.ProductiveWoW_isPercent_percentWithSpaces()
+	unitTests.ProductiveWoW_isPercent_multiplePercentSymbols()
+	unitTests.ProductiveWoW_numberOfDaysSinceDate_todayIsZero()
+	unitTests.ProductiveWoW_numberOfDaysSinceDate_oneDayAgo()
+	unitTests.ProductiveWoW_numberOfDaysSinceDate_sevenDaysAgo()
+	unitTests.ProductiveWoW_numberOfDaysSinceDate_leapYearCheck()
+	unitTests.ProductiveWoW_numberOfDaysSinceDate_futureDate()
+
+	if anyFailed == true then
+		print(toRedText("THERE WAS AT LEAST 1 UNIT TEST THAT FAILED."))
+	end
 
 end

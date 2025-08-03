@@ -1,4 +1,4 @@
--- v1.3
+-- v1.3.1
 -- NOTE: To access the WoW Frame you must reference it like this <name of ProductiveWoW Frame>.Frame (e.g. flashcardFrame.Frame)
 -- For example, to be able to resize, flashcardFrame.Frame:SetSize(width, height)
 
@@ -451,8 +451,8 @@ editCardFrame.navigateBackToMainMenuButtonSound = SOUNDKIT.IG_CHARACTER_INFO_CLO
 local flashcardFrame = {}
 flashcardFrame.frameName = "FlashcardFrame"
 flashcardFrame.titlePrefix = "Deck: " -- Title changes to display deck name when you navigate to this frame
-flashcardFrame.width = commonFrameAttributes.basicFrameWidth + 100
-flashcardFrame.height = commonFrameAttributes.basicFrameHeight + 100
+flashcardFrame.width = ProductiveWoW_getSavedSettingsFlashcardWidth()
+flashcardFrame.height = ProductiveWoW_getSavedSettingsFlashcardHeight()
 -- Displayed text
 flashcardFrame.textTopLeftAnchorXOffset = 15
 flashcardFrame.textTopLeftAnchorYOffset = -10
@@ -616,7 +616,9 @@ addonSettingsFrame.rowScaleTextAnchor = ANCHOR_POINTS.TOPLEFT
 addonSettingsFrame.rowScaleTextParentAnchor = ANCHOR_POINTS.TOPLEFT
 addonSettingsFrame.rowScaleTextXOffset = 20
 addonSettingsFrame.rowScaleTextYOffset = -40
-addonSettingsFrame.rowScaleTextValue = "List of cards row scale (50%-100%): "
+addonSettingsFrame.rowScaleMinValue = 50
+addonSettingsFrame.rowScaleMaxValue = 100
+addonSettingsFrame.rowScaleTextValue = "List of cards row scale (" .. addonSettingsFrame.rowScaleMinValue .. "-" .. addonSettingsFrame.rowScaleMaxValue .. "%): "
 -- Modify deck frame row scale textbox
 addonSettingsFrame.rowScaleTextBoxName = "RowScaleTextBox"
 addonSettingsFrame.rowScaleTextBoxWidth = 40
@@ -624,15 +626,15 @@ addonSettingsFrame.rowScaleTextBoxHeight = 20
 addonSettingsFrame.rowScaleTextBoxAnchor = ANCHOR_POINTS.TOPLEFT
 addonSettingsFrame.rowScaleTextBoxXOffset = 240
 addonSettingsFrame.rowScaleTextBoxYOffset = -36
-addonSettingsFrame.invalidRowScaleMessage = "You need to enter a number or percent between 50-100% (e.g. either 50 or 50% works)."
-addonSettingsFrame.rowScaleMinValue = 50
-addonSettingsFrame.rowScaleMaxValue = 100
+addonSettingsFrame.invalidRowScaleMessage = "You need to enter a number or percent between " .. addonSettingsFrame.rowScaleMinValue .. "-" .. addonSettingsFrame.rowScaleMaxValue .. "% (e.g. either " .. addonSettingsFrame.rowScaleMinValue .. " or " .. addonSettingsFrame.rowScaleMinValue .. "% works)."
 -- Flashcard frame font size setting text
 addonSettingsFrame.flashcardFrameFontSizeTextAnchor = ANCHOR_POINTS.TOPLEFT
 addonSettingsFrame.flashcardFrameFontSizeTextParentAnchor = ANCHOR_POINTS.TOPLEFT
 addonSettingsFrame.flashcardFrameFontSizeTextXOffset = 20
 addonSettingsFrame.flashcardFrameFontSizeTextYOffset = -60
-addonSettingsFrame.flashcardFrameFontSizeTextValue = "Flashcard font size (12-24): "
+addonSettingsFrame.flashcardFontSizeMinValue = 12
+addonSettingsFrame.flashcardFontSizeMaxValue = 24
+addonSettingsFrame.flashcardFrameFontSizeTextValue = "Flashcard font size (" .. addonSettingsFrame.flashcardFontSizeMinValue .. "-" ..addonSettingsFrame.flashcardFontSizeMaxValue .. "): "
 -- Flashcard frame font size setting textbox
 addonSettingsFrame.flashcardFrameFontSizeTextBoxName = "FlashcardFontSizeTextBox"
 addonSettingsFrame.flashcardFrameFontSizeTextBoxWidth = 40
@@ -640,9 +642,39 @@ addonSettingsFrame.flashcardFrameFontSizeTextBoxHeight = 20
 addonSettingsFrame.flashcardFrameFontSizeTextBoxAnchor = ANCHOR_POINTS.TOPLEFT
 addonSettingsFrame.flashcardFrameFontSizeTextBoxXOffset = 240
 addonSettingsFrame.flashcardFrameFontSizeTextBoxYOffset = -56
-addonSettingsFrame.invalidFlashcardFontSizeMessage = "Flashcard font size has to be a value between 12 and 24."
-addonSettingsFrame.flashcardFontSizeMinValue = 12
-addonSettingsFrame.flashcardFontSizeMaxValue = 24
+addonSettingsFrame.invalidFlashcardFontSizeMessage = "Flashcard font size has to be a value between " .. addonSettingsFrame.flashcardFontSizeMinValue .. " and " .. addonSettingsFrame.flashcardFontSizeMaxValue .. "."
+-- Flashcard frame width setting text
+addonSettingsFrame.flashcardFrameWidthTextAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.flashcardFrameWidthTextParentAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.flashcardFrameWidthTextXOffset = 20
+addonSettingsFrame.flashcardFrameWidthTextYOffset = -80
+addonSettingsFrame.flashcardWidthMinValue = 450
+addonSettingsFrame.flashcardWidthMaxValue = 1000
+addonSettingsFrame.flashcardFrameWidthTextValue = "Flashcard width (" .. addonSettingsFrame.flashcardWidthMinValue .. "-" .. addonSettingsFrame.flashcardWidthMaxValue .. "): "
+-- Flashcard frame width setting textbox
+addonSettingsFrame.flashcardFrameWidthTextBoxName = "FlashcardFrameWidthSettingTextBox"
+addonSettingsFrame.flashcardFrameWidthTextBoxWidth = 40
+addonSettingsFrame.flashcardFrameWidthTextBoxHeight = 20
+addonSettingsFrame.flashcardFrameWidthTextBoxAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.flashcardFrameWidthTextBoxXOffset = 240
+addonSettingsFrame.flashcardFrameWidthTextBoxYOffset = -76
+addonSettingsFrame.invalidFlashcardWidthMessage = "Flashcard width has to be a value between " .. addonSettingsFrame.flashcardWidthMinValue .. " and " .. addonSettingsFrame.flashcardWidthMaxValue .. "."
+-- Flashcard frame height setting text
+addonSettingsFrame.flashcardFrameHeightTextAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.flashcardFrameHeightTextParentAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.flashcardFrameHeightTextXOffset = 20
+addonSettingsFrame.flashcardFrameHeightTextYOffset = -100
+addonSettingsFrame.flashcardHeightMinValue = 250
+addonSettingsFrame.flashcardHeightMaxValue = 550
+addonSettingsFrame.flashcardFrameHeightTextValue = "Flashcard height (" .. addonSettingsFrame.flashcardHeightMinValue .. "-" .. addonSettingsFrame.flashcardHeightMaxValue .. "): "
+-- Flashcard frame height setting textbox
+addonSettingsFrame.flashcardFrameHeightTextBoxName = "FlashcardFrameHeightSettingTextBox"
+addonSettingsFrame.flashcardFrameHeightTextBoxWidth = 40
+addonSettingsFrame.flashcardFrameHeightTextBoxHeight = 20
+addonSettingsFrame.flashcardFrameHeightTextBoxAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.flashcardFrameHeightTextBoxXOffset = 240
+addonSettingsFrame.flashcardFrameHeightTextBoxYOffset = -96
+addonSettingsFrame.invalidFlashcardHeightMessage = "Flashcard height has to be a value between " .. addonSettingsFrame.flashcardHeightMinValue .. " and " .. addonSettingsFrame.flashcardHeightMaxValue .. "."
 
 -- FUNCTIONS
 --------------------------------------------------------------------------------------------------------------------------------
@@ -1668,6 +1700,8 @@ local function configureFlashcardFrame()
 	flashcardFrame.Frame:SetScript(EVENTS.ON_SHOW, function(self)
 		-- Resize font if it has changed in settings
 		flashcardFrame.displayedText:SetFont(TEXT_CONSTANTS.DEFAULT_FONT, ProductiveWoW_getSavedSettingsFlashcardFontSize())
+		-- Resize width and height because it can be changed in the settings
+		flashcardFrame.Frame:SetSize(ProductiveWoW_getSavedSettingsFlashcardWidth(), ProductiveWoW_getSavedSettingsFlashcardHeight())
 		ProductiveWoW_beginQuiz()
 		flashcardFrame.showNextCard()
 	end)
@@ -1728,15 +1762,23 @@ local function configureAddonSettingsFrame()
 
 	-- Modify deck frame row scale setting text
 	addonSettingsFrame.rowScaleText = createText(addonSettingsFrame.rowScaleTextAnchor, addonSettingsFrame.Frame, addonSettingsFrame.rowScaleTextParentAnchor, addonSettingsFrame.rowScaleTextXOffset, addonSettingsFrame.rowScaleTextYOffset, addonSettingsFrame.rowScaleTextValue)
-
 	-- Modify deck frame row scale textbox
 	addonSettingsFrame.rowScaleTextBox = createTextBox(addonSettingsFrame.rowScaleTextBoxName, addonSettingsFrame.Frame, addonSettingsFrame.rowScaleTextBoxWidth, addonSettingsFrame.rowScaleTextBoxHeight, addonSettingsFrame.rowScaleTextBoxAnchor, addonSettingsFrame.rowScaleTextBoxXOffset, addonSettingsFrame.rowScaleTextBoxYOffset)
 
 	-- Flashcard frame font size setting text
 	addonSettingsFrame.flashcardFrameFontSizeText = createText(addonSettingsFrame.flashcardFrameFontSizeTextAnchor, addonSettingsFrame.Frame, addonSettingsFrame.flashcardFrameFontSizeTextParentAnchor, addonSettingsFrame.flashcardFrameFontSizeTextXOffset, addonSettingsFrame.flashcardFrameFontSizeTextYOffset, addonSettingsFrame.flashcardFrameFontSizeTextValue)
-
 	-- Flashcard frame font size setting textbox
 	addonSettingsFrame.flashcardFrameFontSizeTextBox = createTextBox(addonSettingsFrame.flashcardFrameFontSizeTextBoxName, addonSettingsFrame.Frame, addonSettingsFrame.flashcardFrameFontSizeTextBoxWidth, addonSettingsFrame.flashcardFrameFontSizeTextBoxHeight, addonSettingsFrame.flashcardFrameFontSizeTextBoxAnchor, addonSettingsFrame.flashcardFrameFontSizeTextBoxXOffset, addonSettingsFrame.flashcardFrameFontSizeTextBoxYOffset)
+
+	-- Flashcard frame width setting text
+	addonSettingsFrame.flashcardFrameWidthText = createText(addonSettingsFrame.flashcardFrameWidthTextAnchor, addonSettingsFrame.Frame, addonSettingsFrame.flashcardFrameWidthTextParentAnchor, addonSettingsFrame.flashcardFrameWidthTextXOffset, addonSettingsFrame.flashcardFrameWidthTextYOffset, addonSettingsFrame.flashcardFrameWidthTextValue)
+	-- Flashcard frame width setting textbox
+	addonSettingsFrame.flashcardFrameWidthTextBox = createTextBox(addonSettingsFrame.flashcardFrameWidthTextBoxName, addonSettingsFrame.Frame, addonSettingsFrame.flashcardFrameWidthTextBoxWidth, addonSettingsFrame.flashcardFrameWidthTextBoxHeight, addonSettingsFrame.flashcardFrameWidthTextBoxAnchor, addonSettingsFrame.flashcardFrameWidthTextBoxXOffset, addonSettingsFrame.flashcardFrameWidthTextBoxYOffset)
+
+	-- Flashcard frame height setting text
+	addonSettingsFrame.flashcardFrameHeightText = createText(addonSettingsFrame.flashcardFrameHeightTextAnchor, addonSettingsFrame.Frame, addonSettingsFrame.flashcardFrameHeightTextParentAnchor, addonSettingsFrame.flashcardFrameHeightTextXOffset, addonSettingsFrame.flashcardFrameHeightTextYOffset, addonSettingsFrame.flashcardFrameHeightTextValue)
+	-- Flashcard frame width setting textbox
+	addonSettingsFrame.flashcardFrameHeightTextBox = createTextBox(addonSettingsFrame.flashcardFrameHeightTextBoxName, addonSettingsFrame.Frame, addonSettingsFrame.flashcardFrameHeightTextBoxWidth, addonSettingsFrame.flashcardFrameHeightTextBoxHeight, addonSettingsFrame.flashcardFrameHeightTextBoxAnchor, addonSettingsFrame.flashcardFrameHeightTextBoxXOffset, addonSettingsFrame.flashcardFrameHeightTextBoxYOffset)
 
 	-- Populate textboxes with existing settings on show
 	addonSettingsFrame.Frame:SetScript(EVENTS.ON_SHOW, function()
@@ -1749,6 +1791,16 @@ local function configureAddonSettingsFrame()
 		if ProductiveWoW_getSavedSettingsFlashcardFontSize() ~= nil then
 			addonSettingsFrame.flashcardFrameFontSizeTextBox:SetText(ProductiveWoW_getSavedSettingsFlashcardFontSize())
 			addonSettingsFrame.flashcardFrameFontSizeTextBox:SetTextColor(unpack(COLOURS.WHITE))
+		end
+		-- Flashcard width
+		if ProductiveWoW_getSavedSettingsFlashcardWidth() ~= nil then
+			addonSettingsFrame.flashcardFrameWidthTextBox:SetText(ProductiveWoW_getSavedSettingsFlashcardWidth())
+			addonSettingsFrame.flashcardFrameWidthTextBox:SetTextColor(unpack(COLOURS.WHITE))
+		end
+		-- Flashcard height
+		if ProductiveWoW_getSavedSettingsFlashcardHeight() ~= nil then
+			addonSettingsFrame.flashcardFrameHeightTextBox:SetText(ProductiveWoW_getSavedSettingsFlashcardHeight())
+			addonSettingsFrame.flashcardFrameHeightTextBox:SetTextColor(unpack(COLOURS.WHITE))
 		end
 	end)
 
@@ -1806,9 +1858,57 @@ local function configureAddonSettingsFrame()
 			addonSettingsFrame.flashcardFrameFontSizeTextBox:SetTextColor(unpack(COLOURS.WHITE))
 		end
 
+		-- Flashcard width
+		local flashcardWidth = addonSettingsFrame.flashcardFrameWidthTextBox:GetText()
+		local invalidFlashcardWidth = false
+		if ProductiveWoW_isNumeric(flashcardWidth) then 
+			flashcardWidth = tonumber(flashcardWidth)
+			if flashcardWidth >= addonSettingsFrame.flashcardWidthMinValue and flashcardWidth <= addonSettingsFrame.flashcardWidthMaxValue then
+				if flashcardWidth ~= ProductiveWoW_getSavedSettingsFlashcardWidth() then -- Checking the value has actually changed
+					ProductiveWoW_setSavedSettingsFlashcardWidth(flashcardWidth)
+					settingWasChanged = true
+				end
+			else
+				invalidFlashcardWidth = true
+			end
+		else
+			invalidFlashcardWidth = true
+		end
+		if invalidFlashcardWidth == true then
+			print(addonSettingsFrame.invalidFlashcardWidthMessage)
+			clearTextBox(addonSettingsFrame.flashcardFrameWidthTextBox)
+			addonSettingsFrame.flashcardFrameWidthTextBox:SetText(ProductiveWoW_getSavedSettingsFlashcardWidth())
+			addonSettingsFrame.flashcardFrameWidthTextBox:SetTextColor(unpack(COLOURS.WHITE))
+		end
+
+		-- Flashcard height
+		local flashcardHeight = addonSettingsFrame.flashcardFrameHeightTextBox:GetText()
+		local invalidFlashcardHeight = false
+		if ProductiveWoW_isNumeric(flashcardHeight) then
+			flashcardHeight = tonumber(flashcardHeight)
+			if flashcardHeight >= addonSettingsFrame.flashcardHeightMinValue and flashcardHeight <= addonSettingsFrame.flashcardHeightMaxValue then
+				if flashcardHeight ~= ProductiveWoW_getSavedSettingsFlashcardHeight() then -- Checking the value has actually changed
+					ProductiveWoW_setSavedSettingsFlashcardHeight(flashcardHeight)
+					settingWasChanged = true
+				end
+			else
+				invalidFlashcardHeight = true
+			end
+		else
+			invalidFlashcardHeight = true
+		end
+		if invalidFlashcardHeight == true then
+			print(addonSettingsFrame.invalidFlashcardHeightMessage)
+			clearTextBox(addonSettingsFrame.flashcardFrameHeightTextBox)
+			addonSettingsFrame.flashcardFrameHeightTextBox:SetText(ProductiveWoW_getSavedSettingsFlashcardHeight())
+			addonSettingsFrame.flashcardFrameHeightTextBox:SetTextColor(unpack(COLOURS.WHITE))
+		end
+
 		-- Clear all textbox focus
 		addonSettingsFrame.rowScaleTextBox:ClearFocus()
 		addonSettingsFrame.flashcardFrameFontSizeTextBox:ClearFocus()
+		addonSettingsFrame.flashcardFrameWidthTextBox:ClearFocus()
+		addonSettingsFrame.flashcardFrameHeightTextBox:ClearFocus()
 		if settingWasChanged == true then
 			print(addonSettingsFrame.successfullySavedSettingsMessage)
 		end

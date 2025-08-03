@@ -1,4 +1,4 @@
--- v1.3
+-- v1.3.1
 
 -- IMPORTANT NOTE: Double check you closed off all the brackets (both curly and square) and that you added all the commas and quotes properly.
 -- if the addon doesn't load, it's because you messed up something here
