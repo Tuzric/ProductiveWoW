@@ -1,4 +1,4 @@
--- v1.3.1
+-- v1.3.2
 
 -- TABLE FUNCTIONS --
 --------------------------------------------------------------------------------------------------------------------------------
@@ -106,6 +106,15 @@ function ProductiveWoW_getRandomSubsetOfArrayTable(tbl, size)
 		return subset
 	end
 	return tbl
+end
+
+-- Get the string value of a key (reverse lookup)
+function ProductiveWoW_getKeyAsString(tbl, val)
+	for k, v in pairs(tbl) do
+		if v == val then
+			return tostring(k)
+		end
+	end
 end
 
 -- Check if an array-type table contains the exact same elements as another table regardless of ordering

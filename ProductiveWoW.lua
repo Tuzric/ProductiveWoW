@@ -1,4 +1,4 @@
--- v1.3.1
+-- v1.3.2
 
 -- DEV AND DEBUG ONLY --
 local resetSavedVariables = false -- Reset ProductiveWoWData and ProductiveWoWSavedSettings
@@ -9,7 +9,7 @@ local runUnitTests = false
 -- GLOBALS --
 --------------------------------------------------------------------------------------------------------------------------------
 ProductiveWoW_ADDON_NAME = "ProductiveWoW"
-ProductiveWoW_ADDON_VERSION = "v1.3.1"
+ProductiveWoW_ADDON_VERSION = "v1.3.2"
 
 
 -- CONSTANTS --
@@ -32,7 +32,8 @@ local ROW_SCALE_KEY = "row scale"
 local FLASHCARD_FONT_SIZE_KEY = "flashcard font size"
 local FLASHCARD_WIDTH_KEY = "flashcard width"
 local FLASHCARD_HEIGHT_KEY = "flashcard height"
-local REMINDER_ON_FLIGHT_PATH_KEY = "reminder on flight path"
+local ENABLE_REMINDERS_KEY = "enable reminders"
+local REMINDER_KEY = "reminders"
 local CARDS_KEY = "cards"
 local QUESTION_KEY = "question"
 local ANSWER_KEY = "answer"
@@ -49,13 +50,18 @@ local HOUR_KEY = "hour"
 local NUMBER_OF_TIMES_EASY_KEY = "number of times easy"
 local NUMBER_OF_TIMES_MEDIUM_KEY = "number of times medium"
 local NUMBER_OF_TIMES_HARD_KEY = "number of times hard"
+-- Deck Reminders
+ProductiveWoW_REMINDERS = {}
+ProductiveWoW_REMINDERS.ON_FLIGHT_PATH = "On Flight Path Taken"
+ProductiveWoW_REMINDERS.ON_QUEST_TURN_IN = "On Quest Turn In"
+ProductiveWoW_REMINDERS.ON_PLAYER_LEVEL_UP = "On Level Up"
 
 
 -- DECK VARIABLES --
 --------------------------------------------------------------------------------------------------------------------------------
 local deckTableDefaultValues = {[CARDS_KEY] = {}, [NEXT_CARD_ID_KEY] = 1, [STARTED_TODAY_KEY] = false, [COMPLETED_TODAY_KEY] = false,
 								[DATE_LAST_PLAYED_KEY] = NEW_DECK_DATE, [LIST_OF_CARDS_REMAINING_TODAY_KEY] = {},
-								[DAILY_NUMBER_OF_CARDS_KEY] = ALL_CARDS, [NUMBER_OF_TIMES_PLAYED_KEY] = 0, [REMINDER_ON_FLIGHT_PATH_KEY] = false}
+								[DAILY_NUMBER_OF_CARDS_KEY] = ALL_CARDS, [NUMBER_OF_TIMES_PLAYED_KEY] = 0, [REMINDER_KEY] = {}}
 
 -- CARD VARIABLES -- 
 --------------------------------------------------------------------------------------------------------------------------------
@@ -77,7 +83,8 @@ local savedSettingsTableInitialValues = {[ADDON_VERSION_KEY] = ProductiveWoW_ADD
 										 [ROW_SCALE_KEY] = DEFAULT_ROW_SCALE,
 									     [FLASHCARD_FONT_SIZE_KEY] = DEFAULT_FLASHCARD_FONT_SIZE,
 									     [FLASHCARD_WIDTH_KEY] = FLASHCARD_DEFAULT_WIDTH,
-									 	 [FLASHCARD_HEIGHT_KEY] = FLASHCARD_DEFAULT_HEIGHT}
+									 	 [FLASHCARD_HEIGHT_KEY] = FLASHCARD_DEFAULT_HEIGHT,
+									 	 [ENABLE_REMINDERS_KEY] = true}
 local dataTableInitialValues = {[DECKS_KEY] = {}}
 
 
@@ -160,6 +167,11 @@ end
 -- Get deck started today yet flag
 function ProductiveWoW_getDeckStartedToday(deckName)
 	return ProductiveWoW_getDeck(deckName)[STARTED_TODAY_KEY]
+end
+
+-- Get deck completed today flag
+function ProductiveWoW_getDeckCompletedToday(deckName)
+	return ProductiveWoW_getDeck(deckName)[COMPLETED_TODAY_KEY]
 end
 
 -- Get deck list of remaining cards to be tested today
@@ -278,15 +290,68 @@ function ProductiveWoW_getSavedSettingsFlashcardHeight()
 	return ProductiveWoWSavedSettings[FLASHCARD_HEIGHT_KEY]
 end
 
--- Get deck reminder on flight path taken true/false
+-- Get Saved Settings reminders enabled
+function ProductiveWoW_getSavedSettingsRemindersEnabled()
+	return ProductiveWoWSavedSettings[ENABLE_REMINDERS_KEY]
+end
+
+-- Get deck's list of reminders
+function ProductiveWoW_getDeckRemindersTable(deckName)
+	return ProductiveWoW_getDeck(deckName)[REMINDER_KEY]
+end
+
+-- Get deck reminder by reminder key, true if it is set, false if it's not set
+function ProductiveWoW_getDeckReminder(deckName, reminder)
+	local reminderName = ProductiveWoW_REMINDERS[reminder]
+	local reminderValue = ProductiveWoW_getDeckRemindersTable(deckName)[reminderName]
+	if reminderValue == nil or reminderValue == false then
+		return false
+	end
+	return true
+end
+
+-- Get if a deck has a reminder set on flight path taken
 function ProductiveWoW_getDeckReminderOnFlightPath(deckName)
-	return ProductiveWoW_getDeck(deckName)[REMINDER_ON_FLIGHT_PATH_KEY]
+	local flightPathReminderKey = ProductiveWoW_getKeyAsString(ProductiveWoW_REMINDERS, ProductiveWoW_REMINDERS.ON_FLIGHT_PATH)
+	return ProductiveWoW_getDeckReminder(deckName, flightPathReminderKey)
+end
+
+-- Get if a deck has a reminder set on quest turn in
+function ProductiveWoW_getDeckReminderOnQuestTurnIn(deckName)
+	local questTurnInReminderKey = ProductiveWoW_getKeyAsString(ProductiveWoW_REMINDERS, ProductiveWoW_REMINDERS.ON_QUEST_TURN_IN)
+	return ProductiveWoW_getDeckReminder(deckName, questTurnInReminderKey)
+end
+
+-- Get if a deck has a reminder set on player level up
+function ProductiveWoW_getDeckReminderOnPlayerLevelUp(deckName)
+	local playerLevelUpKey = ProductiveWoW_getKeyAsString(ProductiveWoW_REMINDERS, ProductiveWoW_REMINDERS.ON_PLAYER_LEVEL_UP)
+	return ProductiveWoW_getDeckReminder(deckName, playerLevelUpKey)
 end
 
 -- Check if any decks have reminders when flight path is taken
-function ProductiveWoW_anyReminderOnFlightPath()
+function ProductiveWoW_anyReminderOnFlightPathTakenExists()
 	for deckName, deckTable in pairs(ProductiveWoW_getAllDecks()) do
 		if ProductiveWoW_getDeckReminderOnFlightPath(deckName) == true then
+			return true
+		end
+	end
+	return false
+end
+
+-- Check if any decks have reminders when a quest is turned in
+function ProductiveWoW_anyReminderOnQuestTurnInExists()
+	for deckName, deckTable in pairs(ProductiveWoW_getAllDecks()) do
+		if ProductiveWoW_getDeckReminderOnQuestTurnIn(deckName) == true then
+			return true
+		end
+	end
+	return false
+end
+
+-- Check if any decks have reminders when the player levels up
+function ProductiveWoW_anyReminderOnPlayerLevelUpExists()
+	for deckName, deckTable in pairs(ProductiveWoW_getAllDecks()) do
+		if ProductiveWoW_getDeckReminderOnPlayerLevelUp(deckName) == true then
 			return true
 		end
 	end
@@ -302,7 +367,7 @@ function ProductiveWoW_setCurrentlySelectedDeck(deckName)
 end
 
 -- Set deck done for today
-function ProductiveWoW_setDeckCompletedForToday(deckName)
+function ProductiveWoW_setDeckCompletedToday(deckName)
 	local deck = ProductiveWoW_getDeck(deckName)
 	deck[COMPLETED_TODAY_KEY] = true
 end
@@ -332,9 +397,16 @@ function ProductiveWoW_setDeckNextCardId(deckName, nextCardId)
 	ProductiveWoW_getDeck(deckName)[NEXT_CARD_ID_KEY] = nextCardId
 end
 
--- Set deck reminder on flight path taken true/false
-function ProductiveWoW_setDeckReminderOnFlightPath(deckName, newValue)
-	ProductiveWoW_getDeck(deckName)[REMINDER_ON_FLIGHT_PATH_KEY] = newValue
+-- Set deck reminder by key
+function ProductiveWoW_setDeckReminder(deckName, reminder, newValue)
+	local currentValue = ProductiveWoW_getDeckReminder(deckName, reminder)
+	local reminderName = ProductiveWoW_REMINDERS[reminder]
+	ProductiveWoW_getDeckRemindersTable(deckName)[reminderName] = newValue
+end
+
+-- Reset deck reminders
+function ProductiveWoW_resetDeckReminders(deckName)
+	ProductiveWoW_getDeck(deckName)[REMINDER_KEY] = {}
 end
 
 -- Set date last played of a card
@@ -406,6 +478,11 @@ function ProductiveWoW_setSavedSettingsFlashcardHeight(newHeight)
 	ProductiveWoWSavedSettings[FLASHCARD_HEIGHT_KEY] = newHeight
 end
 
+-- Set Saved Settings reminders enabled
+function ProductiveWoW_setSavedSettingsRemindersEnabled(newValue)
+	ProductiveWoWSavedSettings[ENABLE_REMINDERS_KEY] = newValue
+end
+
 -- DECK FUNCTIONS --
 --------------------------------------------------------------------------------------------------------------------------------
 
@@ -471,11 +548,6 @@ function ProductiveWoW_isDeckNotPlayedYetToday(deckName)
 	end
 end
 
--- Check if deck has been completed today
-function ProductiveWoW_isDeckCompletedForToday(deckName)
-	return ProductiveWoW_getDeck(deckName)[COMPLETED_TODAY_KEY]
-end
-
 local function updateDeckValues()
 	for deckName, deck in pairs(ProductiveWoWData[DECKS_KEY]) do
 		-- Check to make sure all the deck keys exist if more of them were added in newer versions of the addon (past v1.0)
@@ -504,11 +576,39 @@ function ProductiveWoW_sendDeckReminder(deckName)
 	ProductiveWoW_printReminder(ProductiveWoW_ADDON_NAME .. ": Reminder to study deck - " .. deckName)
 end
 
--- Send reminders when flight path taken
-function ProductiveWoW_sendDeckReminderOnFlightPathTaken()
+-- Send reminders when flight path taken for all decks that have it set
+function ProductiveWoW_sendDeckRemindersOnFlightPathTaken()
 	local anyReminderSent = false
 	for deckName, deckTable in pairs(ProductiveWoW_getAllDecks()) do
-		if ProductiveWoW_getDeckReminderOnFlightPath() == true then
+		if ProductiveWoW_getDeckReminderOnFlightPath(deckName) == true and ProductiveWoW_getDeckCompletedToday(deckName) == false then
+			ProductiveWoW_sendDeckReminder(deckName)
+			anyReminderSent = true
+		end
+	end
+	if anyReminderSent == true then
+		PlaySound(REMINDER_SOUND)
+	end
+end
+
+-- Send reminders when quest is turned in for all decks that have it set
+function ProductiveWoW_sendDeckRemindersOnQuestTurnIn()
+	local anyReminderSent = false
+	for deckName, deckTable in pairs(ProductiveWoW_getAllDecks()) do
+		if ProductiveWoW_getDeckReminderOnQuestTurnIn(deckName) == true and ProductiveWoW_getDeckCompletedToday(deckName) == false then
+			ProductiveWoW_sendDeckReminder(deckName)
+			anyReminderSent = true
+		end
+	end
+	if anyReminderSent == true then
+		PlaySound(REMINDER_SOUND)
+	end
+end
+
+-- Send reminders when the player levels up for all decks that have it set
+function ProductiveWoW_sendDeckRemindersPlayerLevelUp()
+	local anyReminderSent = false
+	for deckName, deckTable in pairs(ProductiveWoW_getAllDecks()) do
+		if ProductiveWoW_getDeckReminderOnPlayerLevelUp(deckName) == true and ProductiveWoW_getDeckCompletedToday(deckName) == false then
 			ProductiveWoW_sendDeckReminder(deckName)
 			anyReminderSent = true
 		end
@@ -697,7 +797,7 @@ function ProductiveWoW_drawRandomNextCard()
 		table.remove(ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs, randomIndex)
 		table.remove(ProductiveWoW_getDeckListOfRemainingCardsToday(currentDeckName), randomIndex)
 	else
-		ProductiveWoW_setDeckCompletedForToday(ProductiveWoW_getCurrentDeckName())
+		ProductiveWoW_setDeckCompletedToday(ProductiveWoW_getCurrentDeckName())
 		ProductiveWoW_showMainMenu()
 		print("Congratulations, you completed this for today.")
 	end
@@ -737,6 +837,9 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 		ProductiveWoW_setSavedSettingsAddonVersion(ProductiveWoW_ADDON_VERSION)
 	end
 
+	-- Do things with CONSTANTS
+	table.sort(ProductiveWoW_REMINDERS) -- Sort so that it appears alphabetically in Deck Settings reminder dropdown
+
 	-- Update saved variables tables with any new keys that were added in subsequent versions of the addon
 	updateSavedSettingsTableWithNewKeys()
 
@@ -763,7 +866,7 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 			ProductiveWoW_showMainMenu()
 			-- Print changelog message for newer versions of the addon just being installed
 			if userJustUpdatedToNewVersionOfAddon == true then
-				print("ProductiveWoW what's new in version " .. ProductiveWoW_ADDON_VERSION .. ": Added the ability to change the flashcard frame's width and height through the Settings button.")
+				print("ProductiveWoW what's new in version " .. ProductiveWoW_ADDON_VERSION .. ": Added deck reminders feature. Go to Modify Deck > Deck Settings to choose when to receive reminders in the chat. You can also toggle all reminders on/off through the Main Menu > Settings. Leave a comment on Curse if you'd like to see more events that trigger reminders.")
 			end
 		end
 	end

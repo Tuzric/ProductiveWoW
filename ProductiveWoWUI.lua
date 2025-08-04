@@ -1,4 +1,4 @@
--- v1.3.1
+-- v1.3.2
 -- NOTE: To access the WoW Frame you must reference it like this <name of ProductiveWoW Frame>.Frame (e.g. flashcardFrame.Frame)
 -- For example, to be able to resize, flashcardFrame.Frame:SetSize(width, height)
 
@@ -23,13 +23,16 @@ FRAME_TYPES.BUTTON = "Button"
 FRAME_TYPES.EDITBOX = "EditBox"
 FRAME_TYPES.DROPDOWN_BUTTON = "DropdownButton"
 FRAME_TYPES.SCROLL_FRAME = "ScrollFrame"
+FRAME_TYPES.CHECKBOX = "CheckButton"
 local FRAME_TEMPLATES = {}
 FRAME_TEMPLATES.BASIC_FRAME_TEMPLATE_WITH_INSET = "BasicFrameTemplateWithInset"
 FRAME_TEMPLATES.UI_PANEL_BUTTON_TEMPLATE = "UIPanelButtonTemplate"
 FRAME_TEMPLATES.INPUT_BOX_TEMPLATE = "InputBoxTemplate"
 FRAME_TEMPLATES.WOW_STYLE_1_DROPDOWN_TEMPLATE = "WowStyle1DropdownTemplate"
+FRAME_TEMPLATES.WOW_STYLE_1_FILTER_DROPDOWN_TEMPLATE = "WowStyle1FilterDropdownTemplate"
 FRAME_TEMPLATES.UI_PANEL_SCROLL_FRAME_TEMPLATE = "UIPanelScrollFrameTemplate"
 FRAME_TEMPLATES.BACKDROP_TEMPLATE = "BackdropTemplate"
+FRAME_TEMPLATES.CHAT_CONFIG_CHECK_BUTTON_TEMPLATE = "ChatConfigCheckButtonTemplate"
 -- Text
 local TEXT_CONSTANTS = {}
 TEXT_CONSTANTS.OVERLAY = "OVERLAY"
@@ -64,6 +67,9 @@ EVENTS.ON_HIDE = "OnHide"
 EVENTS.ON_ENTER = "OnEnter" -- When cursor enters the bounds of a frame
 EVENTS.ON_LEAVE = "OnLeave" -- When cursor leaves the bounds of a frame
 EVENTS.PLAYER_CONTROL_LOST = "PLAYER_CONTROL_LOST" -- Used in conjunction with UnitOnTaxi() to determine when you take a flight path
+EVENTS.QUEST_TURNED_IN = "QUEST_TURNED_IN"
+EVENTS.PLAYER_LEVEL_UP = "PLAYER_LEVEL_UP"
+
 -- Units
 local UNIT_CONSTANTS = {}
 UNIT_CONSTANTS.PLAYER = "player"
@@ -84,6 +90,8 @@ commonFrameAttributes.basicFrameTitleOffsetYFromTopLeft = -5
 commonFrameAttributes.basicButtonWidth = 100
 commonFrameAttributes.basicButtonHeight = 30
 
+-- Event handler frame that is always on and invisible that needs to be there to respond to game events
+local eventHandler = nil
 -- Main menu frame
 local mainMenu = {} -- We register events to the main menu frame
 mainMenu.frameName = "MainMenuFrame"
@@ -518,7 +526,7 @@ deckSettingsFrame.maxCardsTextBoxName = "MaxDailyCardsTextBox"
 deckSettingsFrame.maxCardsTextBoxWidth = 40
 deckSettingsFrame.maxCardsTextBoxHeight = 20
 deckSettingsFrame.maxCardsTextBoxAnchor = ANCHOR_POINTS.TOPLEFT
-deckSettingsFrame.maxCardsTextBoxXOffset = 140
+deckSettingsFrame.maxCardsTextBoxXOffset = 150
 deckSettingsFrame.maxCardsTextBoxYOffset = -36
 -- Save settings button
 deckSettingsFrame.saveDeckSettingsButtonName = "SaveSettingsButton"
@@ -529,8 +537,25 @@ deckSettingsFrame.saveDeckSettingsButtonYOffset = 20
 deckSettingsFrame.saveDeckSettingsButtonOnClick = nil -- Function to save the deck settings
 deckSettingsFrame.maxDailyCardsHasToBeNumericMessage = "Max daily cards has to be a number."
 deckSettingsFrame.maxDailyCardsCannotBeZeroOrLessMessage = "Max daily cards cannot be 0 or less than 0."
-deckSettingsFrame.noChangesMadeMessage = "No changes were made so nothing was saved."
 deckSettingsFrame.settingsSavedMessage = "Settings saved."
+-- Reminders setting text
+deckSettingsFrame.deckRemindersTextAnchor = ANCHOR_POINTS.TOPLEFT
+deckSettingsFrame.deckRemindersTextParentAnchor = ANCHOR_POINTS.TOPLEFT
+deckSettingsFrame.deckRemindersTextXOffset = 20
+deckSettingsFrame.deckRemindersTextYOffset = -60
+deckSettingsFrame.deckRemindersTextValue = "Set deck reminders: "
+-- Reminders dropdown
+deckSettingsFrame.deckRemindersDropdownName = "DeckSettingsRemindersDropdown"
+deckSettingsFrame.deckRemindersDropdownWidth = 100
+deckSettingsFrame.deckRemindersDropdownHeight = 20
+deckSettingsFrame.deckRemindersDropdownAnchor = ANCHOR_POINTS.TOPLEFT
+deckSettingsFrame.deckRemindersDropdownParentAnchor = ANCHOR_POINTS.TOPLEFT
+deckSettingsFrame.deckRemindersDropdownXOffset = 145
+deckSettingsFrame.deckRemindersDropdownYOffset = -57
+deckSettingsFrame.deckRemindersDropdownCheckboxes = {} -- Contains the list of checkboxes created
+deckSettingsFrame.deckRemindersDropdownGeneratorFunction = nil -- Function to generate the dropdown contents
+deckSettingsFrame.reminderDropdownIsSelected = nil -- Function that runs to check if dropdown element is selected or not
+deckSettingsFrame.reminderDropdownSetSelected = nil -- Function that runs when you click a dropdown element
 
 -- Card stats frame
 local cardStatsFrame = {}
@@ -675,6 +700,19 @@ addonSettingsFrame.flashcardFrameHeightTextBoxAnchor = ANCHOR_POINTS.TOPLEFT
 addonSettingsFrame.flashcardFrameHeightTextBoxXOffset = 240
 addonSettingsFrame.flashcardFrameHeightTextBoxYOffset = -96
 addonSettingsFrame.invalidFlashcardHeightMessage = "Flashcard height has to be a value between " .. addonSettingsFrame.flashcardHeightMinValue .. " and " .. addonSettingsFrame.flashcardHeightMaxValue .. "."
+-- Reminders checkbox text
+addonSettingsFrame.deckRemindersCheckboxTextAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.deckRemindersCheckboxTextParentAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.deckRemindersCheckboxTextXOffset = 20
+addonSettingsFrame.deckRemindersCheckboxTextYOffset = -120
+addonSettingsFrame.deckRemindersCheckboxTextValue = "Toggle deck reminders: "
+-- Reminders checkbox
+addonSettingsFrame.deckRemindersCheckboxName = "AddonSettingsRemindersCheckbox"
+addonSettingsFrame.deckRemindersCheckboxAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.deckRemindersCheckboxParentAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.deckRemindersCheckboxXOffset = 232
+addonSettingsFrame.deckRemindersCheckboxYOffset = -116
+
 
 -- FUNCTIONS
 --------------------------------------------------------------------------------------------------------------------------------
@@ -883,11 +921,38 @@ local function createAllBaseFrames()
 	addonSettingsFrame.Frame = createFrame(addonSettingsFrame.frameName, UIParent, addonSettingsFrame.frameTitle)
 end
 
+local function configureEventHandler()
+	eventHandler = CreateFrame("Frame") -- Always active invisible frame that handles events even when no other addon frames are open
+
+	-- Register for events related to reminders to complete flashcards
+	eventHandler:RegisterEvent(EVENTS.PLAYER_CONTROL_LOST) -- Used for flight path taken event to send out reminders to do a deck
+	eventHandler:RegisterEvent(EVENTS.QUEST_TURNED_IN)
+	eventHandler:RegisterEvent(EVENTS.PLAYER_LEVEL_UP)
+
+	-- Handle events related to reminders
+	eventHandler:SetScript(EVENTS.ON_EVENT, function(self, event, ...)
+		if ProductiveWoW_getSavedSettingsRemindersEnabled() == true then 
+			if event == EVENTS.PLAYER_CONTROL_LOST then
+				C_Timer.After(0.1, function() -- After delay to ensure UnitOnTaxi flag is set to true by the system
+					if UnitOnTaxi(UNIT_CONSTANTS.PLAYER) and ProductiveWoW_anyReminderOnFlightPathTakenExists() == true then
+						ProductiveWoW_sendDeckRemindersOnFlightPathTaken()
+					end
+				end)
+			elseif event == EVENTS.QUEST_TURNED_IN then
+				if ProductiveWoW_anyReminderOnQuestTurnInExists() == true then
+					ProductiveWoW_sendDeckRemindersOnQuestTurnIn()
+				end
+			elseif event == EVENTS.PLAYER_LEVEL_UP then
+				if ProductiveWoW_anyReminderOnPlayerLevelUpExists() == true then
+					ProductiveWoW_sendDeckRemindersOnPlayerLevelUp()
+				end
+			end
+		end
+	end)
+end
+
 -- Configure the main menu frame
 local function configureMainMenuFrame()
-	-- Register for events related to reminders to complete flashcards
-	mainMenu.Frame:RegisterEvent(EVENTS.PLAYER_CONTROL_LOST)
-
 	-- Choose deck text
 	mainMenu.chooseDeckText = createText(mainMenu.chooseDeckTextAnchor, mainMenu.Frame, mainMenu.chooseDeckTextParentAnchor, mainMenu.chooseDeckTextXOffset, mainMenu.chooseDeckTextYOffset, mainMenu.chooseDeckTextValue)
 
@@ -947,7 +1012,7 @@ local function configureMainMenuFrame()
 		local currentDeckName = ProductiveWoW_getCurrentDeckName()
 		if currentDeckName ~= nil then
 			if ProductiveWoW_tableLength(ProductiveWoW_getDeckCards(currentDeckName)) ~= 0 then
-				if not ProductiveWoW_isDeckCompletedForToday(currentDeckName) then
+				if not ProductiveWoW_getDeckCompletedToday(currentDeckName) then
 					return true
 				else
 					print(mainMenu.navigateToFlashcardFrameButtonAlreadyCompletedDeckTodayMessage)
@@ -973,15 +1038,6 @@ local function configureMainMenuFrame()
 
 	-- Navigate to addon settings frame button
 	mainMenu.navigateToAddonSettingsButton = createNavigationButton(mainMenu.navigateToAddonSettingsButtonName, mainMenu.Frame, mainMenu.navigateToAddonSettingsButtonText, mainMenu.navigateToAddonSettingsButtonAnchor, mainMenu.navigateToAddonSettingsButtonXOffset, mainMenu.navigateToAddonSettingsButtonYOffset, addonSettingsFrame.Frame)
-
-	-- Handle events related to reminders
-	mainMenu.Frame:SetScript(EVENTS.ON_EVENT, function(self, event, ...)
-		if event == EVENTS.PLAYER_CONTROL_LOST then
-			if UnitOnTaxi(UNIT_CONSTANTS.PLAYER) and ProductiveWoW_anyReminderOnFlightPath() == true then
-				ProductiveWoW_sendDeckReminderOnFlightPathTaken()
-			end
-		end
-	end)
 end
 
 -- Configure create deck frame
@@ -1583,7 +1639,41 @@ local function configureDeckSettingsFrame()
 	-- Max daily cards textbox
 	deckSettingsFrame.maxCardsTextBox = createTextBox(deckSettingsFrame.maxCardsTextBoxName, deckSettingsFrame.Frame, deckSettingsFrame.maxCardsTextBoxWidth, deckSettingsFrame.maxCardsTextBoxHeight, deckSettingsFrame.maxCardsTextBoxAnchor, deckSettingsFrame.maxCardsTextBoxXOffset, deckSettingsFrame.maxCardsTextBoxYOffset)
 
-	-- 
+	-- Deck reminders text
+	deckSettingsFrame.deckRemindersText = createText(deckSettingsFrame.deckRemindersTextAnchor, deckSettingsFrame.Frame, deckSettingsFrame.deckRemindersTextParentAnchor, deckSettingsFrame.deckRemindersTextXOffset, deckSettingsFrame.deckRemindersTextYOffset, deckSettingsFrame.deckRemindersTextValue)
+
+	-- Function that runs when UI checks if the dropdown element is selected or not
+	function deckSettingsFrame.reminderDropdownIsSelected(reminderKey)
+		local currentDeckName = ProductiveWoW_getCurrentDeckName()
+		return ProductiveWoW_getDeckReminder(currentDeckName, reminderKey) -- True if set, false if not set
+	end
+
+	-- Function that runs when you click on the dropdown element
+	function deckSettingsFrame.reminderDropdownSetSelected(reminderKey)
+		local currentDeckName = ProductiveWoW_getCurrentDeckName()
+		if ProductiveWoW_getDeckReminder(currentDeckName, reminderKey) == true then
+			ProductiveWoW_setDeckReminder(currentDeckName, reminderKey, false)
+		else
+			ProductiveWoW_setDeckReminder(currentDeckName, reminderKey, true)
+		end
+	end
+
+	-- Deck reminders dropdown
+	-- Generator function generates the content of the dropdown
+	function deckSettingsFrame.deckRemindersDropdownGeneratorFunction(dropdown, rootDescription)
+		-- Create dropdown buttons for each reminder type
+		for reminderKey, reminder in pairs(ProductiveWoW_REMINDERS) do
+			local newCheckbox = rootDescription:CreateCheckbox(reminder, deckSettingsFrame.reminderDropdownIsSelected, deckSettingsFrame.reminderDropdownSetSelected, reminderKey) -- 1st argument: text displated, 2nd: function that checks if selected, 3rd: function that selects/deselects on click, 4th: data to be passed to the 2 aforementioned functions, in this case the key of the reminder in ProductiveWoW_REMINDERS so we can look it up in the table
+			deckSettingsFrame.deckRemindersDropdownCheckboxes[reminderKey] = newCheckbox
+		end
+	end
+	deckSettingsFrame.deckRemindersDropdown = CreateFrame(FRAME_TYPES.DROPDOWN_BUTTON, deckSettingsFrame.deckRemindersDropdownName, deckSettingsFrame.Frame, FRAME_TEMPLATES.WOW_STYLE_1_FILTER_DROPDOWN_TEMPLATE)
+	deckSettingsFrame.deckRemindersDropdown:SetSize(deckSettingsFrame.deckRemindersDropdownWidth, deckSettingsFrame.deckRemindersDropdownHeight)
+	deckSettingsFrame.deckRemindersDropdown:SetPoint(deckSettingsFrame.deckRemindersDropdownAnchor, deckSettingsFrame.Frame, deckSettingsFrame.deckRemindersDropdownParentAnchor, deckSettingsFrame.deckRemindersDropdownXOffset, deckSettingsFrame.deckRemindersDropdownYOffset)
+	deckSettingsFrame.deckRemindersDropdown:SetupMenu(deckSettingsFrame.deckRemindersDropdownGeneratorFunction)
+	deckSettingsFrame.deckRemindersDropdown:SetScript(EVENTS.ON_SHOW, function()
+		deckSettingsFrame.deckRemindersDropdown:GenerateMenu()
+	end)
 
 	-- Save button
 	function deckSettingsFrame.saveDeckSettingsButtonOnClick()
@@ -1606,8 +1696,6 @@ local function configureDeckSettingsFrame()
 		end
 		if anySettingChanged == true then
 			print(deckSettingsFrame.settingsSavedMessage)
-		elseif anySettingChanged == false and otherErrorMessageDisplayed == false then
-			print(deckSettingsFrame.noChangesMadeMessage)
 		end
 	end
 	deckSettingsFrame.saveDeckSettingsButton = createButton(deckSettingsFrame.saveDeckSettingsButtonName, deckSettingsFrame.Frame, deckSettingsFrame.saveDeckSettingsButtonText, deckSettingsFrame.saveDeckSettingsButtonAnchor, deckSettingsFrame.saveDeckSettingsButtonXOffset, deckSettingsFrame.saveDeckSettingsButtonYOffset, deckSettingsFrame.saveDeckSettingsButtonOnClick)
@@ -1780,6 +1868,23 @@ local function configureAddonSettingsFrame()
 	-- Flashcard frame width setting textbox
 	addonSettingsFrame.flashcardFrameHeightTextBox = createTextBox(addonSettingsFrame.flashcardFrameHeightTextBoxName, addonSettingsFrame.Frame, addonSettingsFrame.flashcardFrameHeightTextBoxWidth, addonSettingsFrame.flashcardFrameHeightTextBoxHeight, addonSettingsFrame.flashcardFrameHeightTextBoxAnchor, addonSettingsFrame.flashcardFrameHeightTextBoxXOffset, addonSettingsFrame.flashcardFrameHeightTextBoxYOffset)
 
+	-- Reminders toggle checkbox text
+	addonSettingsFrame.deckRemindersCheckboxText = createText(addonSettingsFrame.deckRemindersCheckboxTextAnchor, addonSettingsFrame.Frame, addonSettingsFrame.deckRemindersCheckboxTextParentAnchor, addonSettingsFrame.deckRemindersCheckboxTextXOffset, addonSettingsFrame.deckRemindersCheckboxTextYOffset, addonSettingsFrame.deckRemindersCheckboxTextValue)
+	-- Reminders checkbox
+	addonSettingsFrame.deckRemindersCheckbox = CreateFrame(FRAME_TYPES.CHECKBOX, addonSettingsFrame.deckRemindersCheckboxName, addonSettingsFrame.Frame, FRAME_TEMPLATES.CHAT_CONFIG_CHECK_BUTTON_TEMPLATE)
+	addonSettingsFrame.deckRemindersCheckbox:SetPoint(addonSettingsFrame.deckRemindersCheckboxAnchor, addonSettingsFrame.Frame, addonSettingsFrame.deckRemindersCheckboxParentAnchor, addonSettingsFrame.deckRemindersCheckboxXOffset, addonSettingsFrame.deckRemindersCheckboxYOffset)
+	addonSettingsFrame.deckRemindersCheckbox:SetChecked(ProductiveWoW_getSavedSettingsRemindersEnabled())
+	addonSettingsFrame.deckRemindersCheckbox:SetScript(EVENTS.ON_CLICK, function(self)
+		local enabled = ProductiveWoW_getSavedSettingsRemindersEnabled()
+		if enabled == true then
+			ProductiveWoW_setSavedSettingsRemindersEnabled(false)
+			addonSettingsFrame.deckRemindersCheckbox:SetChecked(false)
+		else
+			ProductiveWoW_setSavedSettingsRemindersEnabled(true)
+			addonSettingsFrame.deckRemindersCheckbox:SetChecked(true)
+		end
+	end)
+
 	-- Populate textboxes with existing settings on show
 	addonSettingsFrame.Frame:SetScript(EVENTS.ON_SHOW, function()
 		-- Row scale
@@ -1922,6 +2027,9 @@ end
 
 -- Required to run in this block to ensure that saved variables are loaded before this code runs
 EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
+
+	-- Initialize and configure the event handler frame
+	configureEventHandler()
 
 	-- FRAME INITIALIZATION --
 	-- Create all the frames
