@@ -1744,16 +1744,22 @@ local function configureDeckSettingsFrame()
 	-- Function that runs when UI checks if the dropdown element is selected or not
 	function deckSettingsFrame.reminderDropdownIsSelected(reminderKey)
 		local currentDeckName = ProductiveWoW_getCurrentDeckName()
-		return ProductiveWoW_getDeckReminder(currentDeckName, reminderKey) -- True if set, false if not set
+		if currentDeckName ~= nil then
+			return ProductiveWoW_getDeckReminder(currentDeckName, reminderKey) -- True if set, false if not set
+		else
+			return false
+		end
 	end
 
 	-- Function that runs when you click on the dropdown element
 	function deckSettingsFrame.reminderDropdownSetSelected(reminderKey)
 		local currentDeckName = ProductiveWoW_getCurrentDeckName()
-		if ProductiveWoW_getDeckReminder(currentDeckName, reminderKey) == true then
-			ProductiveWoW_setDeckReminder(currentDeckName, reminderKey, false)
-		else
-			ProductiveWoW_setDeckReminder(currentDeckName, reminderKey, true)
+		if currentDeckName ~= nil then
+			if ProductiveWoW_getDeckReminder(currentDeckName, reminderKey) == true then
+				ProductiveWoW_setDeckReminder(currentDeckName, reminderKey, false)
+			else
+				ProductiveWoW_setDeckReminder(currentDeckName, reminderKey, true)
+			end
 		end
 	end
 
