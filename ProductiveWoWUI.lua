@@ -1,4 +1,4 @@
--- v1.3.2
+-- v1.3.3
 -- NOTE: To access the WoW Frame you must reference it like this <name of ProductiveWoW Frame>.Frame (e.g. flashcardFrame.Frame)
 -- For example, to be able to resize, flashcardFrame.Frame:SetSize(width, height)
 
@@ -24,6 +24,7 @@ FRAME_TYPES.EDITBOX = "EditBox"
 FRAME_TYPES.DROPDOWN_BUTTON = "DropdownButton"
 FRAME_TYPES.SCROLL_FRAME = "ScrollFrame"
 FRAME_TYPES.CHECKBOX = "CheckButton"
+FRAME_TYPES.STATUS_BAR = "StatusBar"
 local FRAME_TEMPLATES = {}
 FRAME_TEMPLATES.BASIC_FRAME_TEMPLATE_WITH_INSET = "BasicFrameTemplateWithInset"
 FRAME_TEMPLATES.UI_PANEL_BUTTON_TEMPLATE = "UIPanelButtonTemplate"
@@ -38,15 +39,21 @@ local TEXT_CONSTANTS = {}
 TEXT_CONSTANTS.OVERLAY = "OVERLAY"
 TEXT_CONSTANTS.GAME_FONT_NORMAL = "GameFontNormal"
 TEXT_CONSTANTS.GAME_FONT_HIGHLIGHT = "GameFontHighlight"
+TEXT_CONSTANTS.GAME_FONT_NORMAL_LARGE = "GameFontNormalLarge"
 TEXT_CONSTANTS.JUSTIFY_LEFT = "LEFT"
 TEXT_CONSTANTS.DEFAULT_FONT = "Fonts\\FRIZQT__.TTF"
 -- Textures
 local TEXTURE_TEMPLATES = {}
 TEXTURE_TEMPLATES.ARTWORK = "ARTWORK"
+TEXTURE_TEMPLATES.UI_STATUS_BAR = "Interface\\TARGETINGFRAME\\UI-StatusBar"
+TEXTURE_TEMPLATES.BACKGROUND = "BACKGROUND"
 -- Colours
 local COLOURS = {}
 COLOURS.GREY = {0.5, 0.5, 0.5}
+COLOURS.BLACK = {0, 0, 0}
 COLOURS.WHITE = {1, 1, 1}
+COLOURS.YELLOW = {1, 0.82, 0}
+COLOURS.PURPLE = {0.6, 0, 0.8}
 -- Mouse/keyboard buttons
 local INPUT_BUTTONS = {}
 INPUT_BUTTONS.MOUSE_RIGHT = "RightButton"
@@ -69,6 +76,13 @@ EVENTS.ON_LEAVE = "OnLeave" -- When cursor leaves the bounds of a frame
 EVENTS.PLAYER_CONTROL_LOST = "PLAYER_CONTROL_LOST" -- Used in conjunction with UnitOnTaxi() to determine when you take a flight path
 EVENTS.QUEST_TURNED_IN = "QUEST_TURNED_IN"
 EVENTS.PLAYER_LEVEL_UP = "PLAYER_LEVEL_UP"
+EVENTS.ON_FINISHED = "OnFinished"
+-- Animation
+local ANIMATION = {}
+ANIMATION.TRANSLATION = "Translation"
+ANIMATION.ALPHA = "Alpha"
+ANIMATION.SMOOTHING_OUT = "OUT"
+ANIMATION.SMOOTHING_IN = "IN"
 
 -- Units
 local UNIT_CONSTANTS = {}
@@ -96,10 +110,12 @@ local eventHandler = nil
 local mainMenu = {} -- We register events to the main menu frame
 mainMenu.frameName = "MainMenuFrame"
 mainMenu.frameTitle = ProductiveWoW_ADDON_NAME .. " " .. ProductiveWoW_ADDON_VERSION
+mainMenu.width = commonFrameAttributes.basicFrameWidth
+mainMenu.height = commonFrameAttributes.basicFrameHeight
 -- Main menu choose deck text
 mainMenu.chooseDeckTextAnchor = ANCHOR_POINTS.TOPLEFT
 mainMenu.chooseDeckTextParentAnchor = ANCHOR_POINTS.TOPLEFT
-mainMenu.chooseDeckTextXOffset = 15
+mainMenu.chooseDeckTextXOffset = 25
 mainMenu.chooseDeckTextYOffset = -40
 mainMenu.chooseDeckTextValue = "Choose deck:"
 -- Main menu choose deck dropdown
@@ -109,7 +125,7 @@ mainMenu.chooseDeckDropdownWidth = 100
 mainMenu.chooseDeckDropdownHeight = 25
 mainMenu.chooseDeckDropdownAnchor = ANCHOR_POINTS.TOPLEFT
 mainMenu.chooseDeckDropdownParentAnchor = ANCHOR_POINTS.TOPLEFT
-mainMenu.chooseDeckDropdownXOffset = 100
+mainMenu.chooseDeckDropdownXOffset = 125
 mainMenu.chooseDeckDropdownYOffset = -35
 -- Create deck button
 mainMenu.navigateToCreateDeckButtonName = "NavigateToCreateDeckFromMainMenu"
@@ -149,6 +165,32 @@ mainMenu.navigateToAddonSettingsButtonText = "Settings"
 mainMenu.navigateToAddonSettingsButtonAnchor = ANCHOR_POINTS.TOPLEFT
 mainMenu.navigateToAddonSettingsButtonXOffset = 230
 mainMenu.navigateToAddonSettingsButtonYOffset = -62
+-- Deck level label text
+mainMenu.deckLevelTextAnchor = ANCHOR_POINTS.CENTER 
+mainMenu.deckLevelTextParentAnchor = ANCHOR_POINTS.BOTTOM
+mainMenu.deckLevelTextXOffset = 0
+mainMenu.deckLevelTextYOffset = 75
+mainMenu.deckLevelTextValue = "Deck Level"
+mainMenu.deckLevelTextColour = COLOURS.YELLOW
+-- Deck level number text
+mainMenu.deckLevelNumberTextAnchor = ANCHOR_POINTS.CENTER
+mainMenu.deckLevelNumberTextParentAnchor = ANCHOR_POINTS.BOTTOM
+mainMenu.deckLevelNumberTextXOffset = 0
+mainMenu.deckLevelNumberTextYOffset = 45
+mainMenu.deckLevelNumberTextColour = COLOURS.YELLOW
+mainMenu.deckLevelNumberTextFontSize = 24
+mainMenu.updateDeckLevelText = nil -- Function to update the deck level when new deck chosen from dropdown
+-- Deck experience bar
+mainMenu.deckExperienceBarName = "DeckExperienceBar"
+mainMenu.deckExperienceBarWidth = mainMenu.width - 15
+mainMenu.deckExperienceBarHeight = 15
+mainMenu.deckExperienceBarAnchor = ANCHOR_POINTS.CENTER
+mainMenu.deckExperienceBarParentAnchor = ANCHOR_POINTS.BOTTOM
+mainMenu.deckExperienceBarXOffset = 0
+mainMenu.deckExperienceBarYOffset = 15
+mainMenu.deckExperienceBarColour = COLOURS.PURPLE
+mainMenu.deckExperienceBarBackgroundColour = COLOURS.BLACK
+mainMenu.updateExpBar = nil -- Function to update exp bar text and status
 
 -- Create deck frame
 local createDeckFrame = {}
@@ -494,6 +536,14 @@ flashcardFrame.hardDifficultyButtonText = "Hard"
 flashcardFrame.hardDifficultyButtonAnchor = ANCHOR_POINTS.BOTTOMLEFT
 flashcardFrame.hardDifficultyButtonXOffset = 220
 flashcardFrame.hardDifficultyButtonYOffset = 20
+flashcardFrame.floatingExpTextColour = COLOURS.PURPLE
+flashcardFrame.showExpGained = nil -- Function to show floating exp gained text
+flashcardFrame.floatingExpTextMovementAnimationDuration = 1 -- How long it takes the text to move the distance
+flashcardFrame.floatingExpTextMovementAnimationYDistance = 50 -- The distance the floating text moves in the Y-axis
+flashcardFrame.floatingExpTextFadeAnimationDuration = 1 -- How long the fade animation takes
+flashcardFrame.mediumToEasyMessage = "med to easy"
+flashcardFrame.hardToEasyMessage = "hard to easy"
+flashcardFrame.hardToMediumMessage = "hard to med"
 -- Navigate back to main menu button
 flashcardFrame.navigateBackToMainMenuButtonName = "NavigateBackToMainMenuFromFlashcardFrameButton"
 flashcardFrame.navigateBackToMainMenuButtonText = "Main Menu"
@@ -953,6 +1003,9 @@ end
 
 -- Configure the main menu frame
 local function configureMainMenuFrame()
+	-- Resize
+	mainMenu.Frame:SetSize(mainMenu.width, mainMenu.height)
+
 	-- Choose deck text
 	mainMenu.chooseDeckText = createText(mainMenu.chooseDeckTextAnchor, mainMenu.Frame, mainMenu.chooseDeckTextParentAnchor, mainMenu.chooseDeckTextXOffset, mainMenu.chooseDeckTextYOffset, mainMenu.chooseDeckTextValue)
 
@@ -970,6 +1023,8 @@ local function configureMainMenuFrame()
 				-- Function that determines what happens when you click on a deck in the dropdown
 				ProductiveWoW_setCurrentlySelectedDeck(deckName)
 				mainMenu.chooseDeckDropdown:SetDefaultText(deckName)
+				mainMenu.updateDeckLevelText()
+				mainMenu.updateExpBar()
 			end)
 		end
 	end
@@ -1038,6 +1093,50 @@ local function configureMainMenuFrame()
 
 	-- Navigate to addon settings frame button
 	mainMenu.navigateToAddonSettingsButton = createNavigationButton(mainMenu.navigateToAddonSettingsButtonName, mainMenu.Frame, mainMenu.navigateToAddonSettingsButtonText, mainMenu.navigateToAddonSettingsButtonAnchor, mainMenu.navigateToAddonSettingsButtonXOffset, mainMenu.navigateToAddonSettingsButtonYOffset, addonSettingsFrame.Frame)
+
+	-- Deck level text
+	mainMenu.deckLevelText = createText(mainMenu.deckLevelTextAnchor, mainMenu.Frame, mainMenu.deckLevelTextParentAnchor, mainMenu.deckLevelTextXOffset, mainMenu.deckLevelTextYOffset, mainMenu.deckLevelTextValue)
+	mainMenu.deckLevelText:SetTextColor(unpack(mainMenu.deckLevelTextColour))
+	-- Deck level number text
+	mainMenu.deckLevelNumberText = createText(mainMenu.deckLevelNumberTextAnchor, mainMenu.Frame, mainMenu.deckLevelNumberTextParentAnchor, mainMenu.deckLevelNumberTextXOffset, mainMenu.deckLevelNumberTextYOffset, "")
+	mainMenu.deckLevelNumberText:SetTextColor(unpack(mainMenu.deckLevelNumberTextColour))
+	mainMenu.deckLevelNumberText:SetFont(TEXT_CONSTANTS.DEFAULT_FONT, mainMenu.deckLevelNumberTextFontSize)
+	function mainMenu.updateDeckLevelText()
+		local currentDeckName = ProductiveWoW_getCurrentDeckName()
+		if currentDeckName == nil or currentDeckName == "" then
+			mainMenu.deckLevelNumberText:SetText("")
+		else
+			mainMenu.deckLevelNumberText:SetText(tostring(ProductiveWoW_getDeckLevel(currentDeckName)))
+		end
+	end
+	mainMenu.deckLevelNumberText:SetScript(EVENTS.ON_SHOW, function() mainMenu.updateDeckLevelText() end)
+
+	-- Deck exp bar
+	mainMenu.deckExperienceBar = CreateFrame(FRAME_TYPES.STATUS_BAR, mainMenu.deckExperienceBarName, mainMenu.Frame)
+	mainMenu.deckExperienceBar:SetSize(mainMenu.deckExperienceBarWidth, mainMenu.deckExperienceBarHeight)
+	mainMenu.deckExperienceBar:SetPoint(mainMenu.deckExperienceBarAnchor, mainMenu.Frame, mainMenu.deckExperienceBarParentAnchor, mainMenu.deckExperienceBarXOffset, mainMenu.deckExperienceBarYOffset)
+	mainMenu.deckExperienceBar:SetStatusBarTexture(TEXTURE_TEMPLATES.UI_STATUS_BAR)
+	mainMenu.deckExperienceBar:SetStatusBarColor(unpack(mainMenu.deckExperienceBarColour))
+	mainMenu.deckExperienceBar.bg = mainMenu.deckExperienceBar:CreateTexture(nil, TEXTURE_TEMPLATES.BACKGROUND)
+	mainMenu.deckExperienceBar.bg:SetAllPoints(true)
+	mainMenu.deckExperienceBar.bg:SetColorTexture(unpack(mainMenu.deckExperienceBarBackgroundColour))
+	mainMenu.deckExperienceBar.text = mainMenu.deckExperienceBar:CreateFontString(nil, TEXT_CONSTANTS.OVERLAY, TEXT_CONSTANTS.GAME_FONT_HIGHLIGHT)
+	mainMenu.deckExperienceBar.text:SetPoint(ANCHOR_POINTS.CENTER, mainMenu.deckExperienceBar)
+	function mainMenu.updateExpBar()
+		local currentDeckName = ProductiveWoW_getCurrentDeckName()
+		if currentDeckName == nil or currentDeckName == "" then
+			mainMenu.deckExperienceBar:SetMinMaxValues(0, 0)
+			mainMenu.deckExperienceBar:SetValue(0)
+		else
+			local currentDeckLevel = ProductiveWoW_getDeckLevel(currentDeckName)
+			local currentExp = ProductiveWoW_getDeckExperienceForCurrentLevel(currentDeckName)
+			local maxExp = ProductiveWoW_getExperienceRequiredForNextDeckLevel(currentDeckLevel)
+			mainMenu.deckExperienceBar:SetMinMaxValues(0, maxExp)
+			mainMenu.deckExperienceBar:SetValue(currentExp)
+			mainMenu.deckExperienceBar.text:SetText(tostring(currentExp) .. " / " .. tostring(maxExp))
+		end
+	end
+	mainMenu.deckExperienceBar:SetScript(EVENTS.ON_SHOW, function() mainMenu.updateExpBar() end)	
 end
 
 -- Configure create deck frame
@@ -1754,29 +1853,84 @@ local function configureFlashcardFrame()
 		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
 	end
 
+	-- Display exp gained text
+	flashcardFrame.floatingExpText = flashcardFrame.Frame:CreateFontString(nil, TEXT_CONSTANTS.OVERLAY, TEXT_CONSTANTS.GAME_FONT_NORMAL_LARGE)
+	flashcardFrame.floatingExpText:SetTextColor(unpack(flashcardFrame.floatingExpTextColour))
+	flashcardFrame.floatingExpText:SetAlpha(0) -- Hide at first
+	flashcardFrame.floatingExpTextAnimationGroup = flashcardFrame.floatingExpText:CreateAnimationGroup()
+	flashcardFrame.floatingExpTextMovementAnimation = flashcardFrame.floatingExpTextAnimationGroup:CreateAnimation(ANIMATION.TRANSLATION)
+	flashcardFrame.floatingExpTextMovementAnimation:SetDuration(flashcardFrame.floatingExpTextMovementAnimationDuration)
+	flashcardFrame.floatingExpTextMovementAnimation:SetOffset(0, flashcardFrame.floatingExpTextMovementAnimationYDistance)
+	flashcardFrame.floatingExpTextMovementAnimation:SetSmoothing(ANIMATION.SMOOTHING_OUT)
+	flashcardFrame.floatingExpTextFadeAnimation = flashcardFrame.floatingExpTextAnimationGroup:CreateAnimation(ANIMATION.ALPHA)
+	flashcardFrame.floatingExpTextFadeAnimation:SetFromAlpha(1)
+	flashcardFrame.floatingExpTextFadeAnimation:SetToAlpha(0)
+	flashcardFrame.floatingExpTextFadeAnimation:SetDuration(flashcardFrame.floatingExpTextFadeAnimationDuration)
+	flashcardFrame.floatingExpTextFadeAnimation:SetSmoothing(ANIMATION.SMOOTHING_IN)
+	flashcardFrame.floatingExpTextFadeAnimation:SetScript(EVENTS.ON_FINISHED, function()
+		flashcardFrame.floatingExpText:SetAlpha(0)
+		flashcardFrame.floatingExpText:ClearAllPoints()
+		flashcardFrame.floatingExpText:SetPoint(ANCHOR_POINTS.CENTER, button, ANCHOR_POINTS.TOP, 0, 10)
+	end)
+	function flashcardFrame.showExpGained(button, experience, message)
+		flashcardFrame.floatingExpText:SetText("+" .. tostring(experience) .. " " .. message)
+		flashcardFrame.floatingExpText:SetAlpha(1)
+		flashcardFrame.floatingExpText:ClearAllPoints()
+		flashcardFrame.floatingExpText:SetPoint(ANCHOR_POINTS.CENTER, flashcardFrame.Frame, ANCHOR_POINTS.BOTTOMRIGHT, -75, 60)
+		flashcardFrame.floatingExpTextAnimationGroup:Stop()
+		flashcardFrame.floatingExpTextAnimationGroup:Play()
+	end
+
 	-- Easy difficulty button
 	function flashcardFrame.easyDifficultyButtonOnClick(self)
+		local currentDeckName = ProductiveWoW_getCurrentDeckName()
 		local currentCardID = ProductiveWoW_getCurrentCardID()
+		local previousDifficulty = ProductiveWoW_getCardDifficulty(currentDeckName, currentCardID)
 		ProductiveWoW_cardEasyDifficultyChosen(currentCardID)
 		flashcardFrame.nextQuestion(self)
+		if previousDifficulty == ProductiveWoW_MEDIUM then
+			flashcardFrame.showExpGained(self, ProductiveWoW_DECK_EXPERIENCE.MEDIUM_TO_EASY, flashcardFrame.mediumToEasyMessage)
+		elseif previousDifficulty == ProductiveWoW_HARD then
+			flashcardFrame.showExpGained(self, ProductiveWoW_DECK_EXPERIENCE.HARD_TO_EASY, flashcardFrame.hardToEasyMessage)
+		else
+			flashcardFrame.showExpGained(self, ProductiveWoW_DECK_EXPERIENCE.EASY, ProductiveWoW_EASY)
+		end
 	end
 	flashcardFrame.easyDifficultyButton = createButton(flashcardFrame.easyDifficultyButtonName, flashcardFrame.Frame, flashcardFrame.easyDifficultyButtonText, flashcardFrame.easyDifficultyButtonAnchor, flashcardFrame.easyDifficultyButtonXOffset, flashcardFrame.easyDifficultyButtonYOffset, flashcardFrame.easyDifficultyButtonOnClick)
 	flashcardFrame.easyDifficultyButton:Hide()
 
 	-- Medium difficulty button
 	function flashcardFrame.mediumDifficultyButtonOnClick(self)
+		local currentDeckName = ProductiveWoW_getCurrentDeckName()
 		local currentCardID = ProductiveWoW_getCurrentCardID()
+		local previousDifficulty = ProductiveWoW_getCardDifficulty(currentDeckName, currentCardID)
 		ProductiveWoW_cardMediumDifficultyChosen(currentCardID)
 		flashcardFrame.nextQuestion(self)
+		if previousDifficulty == ProductiveWoW_EASY then
+			flashcardFrame.showExpGained(self, ProductiveWoW_DECK_EXPERIENCE.MEDIUM, ProductiveWoW_MEDIUM)
+		elseif previousDifficulty == ProductiveWoW_HARD then
+			flashcardFrame.showExpGained(self, ProductiveWoW_DECK_EXPERIENCE.HARD_TO_MEDIUM, flashcardFrame.hardToMediumMessage)
+		else
+			flashcardFrame.showExpGained(self, ProductiveWoW_DECK_EXPERIENCE.MEDIUM, ProductiveWoW_MEDIUM)
+		end
 	end
 	flashcardFrame.mediumDifficultyButton = createButton(flashcardFrame.mediumDifficultyButtonName, flashcardFrame.Frame, flashcardFrame.mediumDifficultyButtonText, flashcardFrame.mediumDifficultyButtonAnchor, flashcardFrame.mediumDifficultyButtonXOffset, flashcardFrame.mediumDifficultyButtonYOffset, flashcardFrame.mediumDifficultyButtonOnClick)
 	flashcardFrame.mediumDifficultyButton:Hide()
 
 	-- Hard difficulty button
 	function flashcardFrame.hardDifficultyButtonOnClick(self)
+		local currentDeckName = ProductiveWoW_getCurrentDeckName()
 		local currentCardID = ProductiveWoW_getCurrentCardID()
+		local previousDifficulty = ProductiveWoW_getCardDifficulty(currentDeckName, currentCardID)
 		ProductiveWoW_cardHardDifficultyChosen(currentCardID)
 		flashcardFrame.nextQuestion(self)
+		if previousDifficulty == ProductiveWoW_EASY then
+			flashcardFrame.showExpGained(self, ProductiveWoW_DECK_EXPERIENCE.HARD, ProductiveWoW_HARD)
+		elseif previousDifficulty == ProductiveWoW_MEDIUM then
+			flashcardFrame.showExpGained(self, ProductiveWoW_DECK_EXPERIENCE.HARD, ProductiveWoW_HARD)
+		else
+			flashcardFrame.showExpGained(self, ProductiveWoW_DECK_EXPERIENCE.EASY, ProductiveWoW_HARD)
+		end
 	end
 	flashcardFrame.hardDifficultyButton = createButton(flashcardFrame.hardDifficultyButtonName, flashcardFrame.Frame, flashcardFrame.hardDifficultyButtonText, flashcardFrame.hardDifficultyButtonAnchor, flashcardFrame.hardDifficultyButtonXOffset, flashcardFrame.hardDifficultyButtonYOffset, flashcardFrame.hardDifficultyButtonOnClick)
 	flashcardFrame.hardDifficultyButton:Hide()

@@ -1,4 +1,4 @@
--- v1.3.2
+-- v1.3.3
 
 -- TABLE FUNCTIONS --
 --------------------------------------------------------------------------------------------------------------------------------
@@ -139,6 +139,17 @@ function ProductiveWoW_arrayTablesContainSameElements(arrayTable1, arrayTable2)
 	else
 		return false
 	end
+end
+
+-- Get max value in array of integers
+function ProductiveWoW_getMax(tbl)
+	local currentMax = nil
+	for i, v in ipairs(tbl) do
+		if currentMax == nil or v > currentMax then
+			currentMax = v
+		end
+	end
+	return currentMax
 end
 
 -- STRING FUNCTIONS --

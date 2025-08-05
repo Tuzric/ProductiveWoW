@@ -1,4 +1,4 @@
--- v1.3.2
+-- v1.3.3
 
 -- DEV AND DEBUG ONLY --
 local resetSavedVariables = false -- Reset ProductiveWoWData and ProductiveWoWSavedSettings
@@ -9,14 +9,14 @@ local runUnitTests = false
 -- GLOBALS --
 --------------------------------------------------------------------------------------------------------------------------------
 ProductiveWoW_ADDON_NAME = "ProductiveWoW"
-ProductiveWoW_ADDON_VERSION = "v1.3.2"
+ProductiveWoW_ADDON_VERSION = "v1.3.3"
 
 
 -- CONSTANTS --
 --------------------------------------------------------------------------------------------------------------------------------
-local EASY = "easy" -- Constant string value representing the Easy difficulty of a card
-local MEDIUM = "medium" -- Constant string value representing the Medium difficulty of a card
-local HARD = "hard" -- Constant string value representing the Hard difficulty of a card
+ProductiveWoW_EASY = "easy" -- Constant string value representing the Easy difficulty of a card
+ProductiveWoW_MEDIUM = "medium" -- Constant string value representing the Medium difficulty of a card
+ProductiveWoW_HARD = "hard" -- Constant string value representing the Hard difficulty of a card
 local NEW_DECK_DATE = date("*t", time() - 180000) -- About 2 days before today. This is the initial value of deck["date last played"] when a new deck is created and it has to be 2 days before so that its status is set to "Not Played Today"
 local ALL_CARDS = -1 -- Test on all cards per day
 local DEFAULT_ROW_SCALE = 0.5 -- 50% of max allowed row scale
@@ -35,6 +35,8 @@ local FLASHCARD_HEIGHT_KEY = "flashcard height"
 local ENABLE_REMINDERS_KEY = "enable reminders"
 local REMINDER_KEY = "reminders"
 local CARDS_KEY = "cards"
+local DECK_LEVEL_KEY = "level"
+local DECK_EXPERIENCE_KEY = "experience" -- Resets to 0 after each level up, not cumulative across levels
 local QUESTION_KEY = "question"
 local ANSWER_KEY = "answer"
 local DIFFICULTY_KEY = "difficulty"
@@ -55,17 +57,30 @@ ProductiveWoW_REMINDERS = {}
 ProductiveWoW_REMINDERS.ON_FLIGHT_PATH = "On Flight Path Taken"
 ProductiveWoW_REMINDERS.ON_QUEST_TURN_IN = "On Quest Turn In"
 ProductiveWoW_REMINDERS.ON_PLAYER_LEVEL_UP = "On Level Up"
+-- Deck experience values
+ProductiveWoW_DECK_EXPERIENCE = {}
+ProductiveWoW_DECK_EXPERIENCE.EASY = 5
+ProductiveWoW_DECK_EXPERIENCE.MEDIUM = 10
+ProductiveWoW_DECK_EXPERIENCE.HARD = 20
+ProductiveWoW_DECK_EXPERIENCE.MEDIUM_TO_EASY = 30
+ProductiveWoW_DECK_EXPERIENCE.HARD_TO_MEDIUM = 50
+ProductiveWoW_DECK_EXPERIENCE.HARD_TO_EASY = 100
+-- Deck level experience requirements
+local DECK_LEVELS = {[1]=0, [2]=100, [3]=250, [4]=500, [5]=1000, [6]=2000, [7]=4000, [8]=8000, [9]=16000, [10]=32000}
+DECK_LEVELS.MAX_LEVEL = ProductiveWoW_getMax(ProductiveWoW_getKeys(DECK_LEVELS))
+
 
 
 -- DECK VARIABLES --
 --------------------------------------------------------------------------------------------------------------------------------
 local deckTableDefaultValues = {[CARDS_KEY] = {}, [NEXT_CARD_ID_KEY] = 1, [STARTED_TODAY_KEY] = false, [COMPLETED_TODAY_KEY] = false,
 								[DATE_LAST_PLAYED_KEY] = NEW_DECK_DATE, [LIST_OF_CARDS_REMAINING_TODAY_KEY] = {},
-								[DAILY_NUMBER_OF_CARDS_KEY] = ALL_CARDS, [NUMBER_OF_TIMES_PLAYED_KEY] = 0, [REMINDER_KEY] = {}}
+								[DAILY_NUMBER_OF_CARDS_KEY] = ALL_CARDS, [NUMBER_OF_TIMES_PLAYED_KEY] = 0, [REMINDER_KEY] = {},
+								[DECK_LEVEL_KEY] = 1, [DECK_EXPERIENCE_KEY] = 0}
 
 -- CARD VARIABLES -- 
 --------------------------------------------------------------------------------------------------------------------------------
-local cardTableDefaultValues = {[QUESTION_KEY] = "", [ANSWER_KEY] = "", [DIFFICULTY_KEY] = HARD, [DATE_LAST_PLAYED_KEY] = NEW_DECK_DATE,
+local cardTableDefaultValues = {[QUESTION_KEY] = "", [ANSWER_KEY] = "", [DIFFICULTY_KEY] = ProductiveWoW_HARD, [DATE_LAST_PLAYED_KEY] = NEW_DECK_DATE,
 								[NUMBER_OF_TIMES_PLAYED_KEY] = 0, [NUMBER_OF_TIMES_EASY_KEY] = 0, [NUMBER_OF_TIMES_MEDIUM_KEY] = 0,
 								[NUMBER_OF_TIMES_HARD_KEY] = 0}
 
@@ -358,6 +373,24 @@ function ProductiveWoW_anyReminderOnPlayerLevelUpExists()
 	return false
 end
 
+-- Get deck level
+function ProductiveWoW_getDeckLevel(deckName)
+	return ProductiveWoW_getDeck(deckName)[DECK_LEVEL_KEY]
+end
+
+-- Get deck experience accumulated for current level
+function ProductiveWoW_getDeckExperienceForCurrentLevel(deckName)
+	return ProductiveWoW_getDeck(deckName)[DECK_EXPERIENCE_KEY]
+end
+
+-- Get next deck level's exp requirements
+function ProductiveWoW_getExperienceRequiredForNextDeckLevel(currentDeckLevel)
+	if currentDeckLevel ~= DECK_LEVELS.MAX_LEVEL then
+		return DECK_LEVELS[currentDeckLevel + 1]
+	end
+	return 0
+end
+
 -- SETTERS --
 --------------------------------------------------------------------------------------------------------------------------------
 
@@ -481,6 +514,16 @@ end
 -- Set Saved Settings reminders enabled
 function ProductiveWoW_setSavedSettingsRemindersEnabled(newValue)
 	ProductiveWoWSavedSettings[ENABLE_REMINDERS_KEY] = newValue
+end
+
+-- Set deck level
+function ProductiveWoW_setDeckLevel(deckName, level)
+	ProductiveWoW_getDeck(deckName)[DECK_LEVEL_KEY] = level
+end
+
+-- Set deck experience
+function ProductiveWoW_setDeckExperience(deckName, experience)
+	ProductiveWoW_getDeck(deckName)[DECK_EXPERIENCE_KEY] = experience
 end
 
 -- DECK FUNCTIONS --
@@ -618,6 +661,33 @@ function ProductiveWoW_sendDeckRemindersPlayerLevelUp()
 	end
 end
 
+-- Level up the deck
+function ProductiveWoW_deckLevelUp(deckName)
+	local currentLevel = ProductiveWoW_getDeckLevel(deckName)
+	if currentLevel ~= DECK_LEVELS.MAX_LEVEL then
+		ProductiveWoW_setDeckLevel(deckName, currentLevel + 1)
+		print("Congratulations! You leveled up " .. deckName .. " to level " .. tostring(currentLevel + 1) .. "!")
+	end
+end
+
+-- Add deck experience
+function ProductiveWoW_addDeckExperience(deckName, experience)
+	local currentExperience = ProductiveWoW_getDeckExperienceForCurrentLevel(deckName)
+	local newExperience = currentExperience + experience
+	local currentDeckLevel = ProductiveWoW_getDeckLevel(deckName)
+	if currentDeckLevel == DECK_LEVELS.MAX_LEVEL then
+		ProductiveWoW_setDeckExperience(deckName, 0)
+		return
+	end
+	if newExperience >= ProductiveWoW_getExperienceRequiredForNextDeckLevel(currentDeckLevel) then
+		local leftoverExperience = newExperience - ProductiveWoW_getExperienceRequiredForNextDeckLevel(currentDeckLevel)
+		ProductiveWoW_deckLevelUp(deckName)
+		ProductiveWoW_setDeckExperience(deckName, leftoverExperience)
+	else
+		ProductiveWoW_getDeck(deckName)[DECK_EXPERIENCE_KEY] = newExperience
+	end
+end
+
 -- CARD FUNCTIONS --
 --------------------------------------------------------------------------------------------------------------------------------
 
@@ -687,24 +757,48 @@ end
 function ProductiveWoW_cardEasyDifficultyChosen(cardId)
 	local deckName = ProductiveWoW_getCurrentDeckName()
 	local card = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(cardId)
+	local previousDifficulty = ProductiveWoW_getCardDifficulty(deckName, cardId)
 	card[NUMBER_OF_TIMES_EASY_KEY] = ProductiveWoW_getCardNumberOfTimesEasy(deckName, cardId) + 1
-	ProductiveWoW_setCardDifficulty(deckName, cardId, EASY)
+	ProductiveWoW_setCardDifficulty(deckName, cardId, ProductiveWoW_EASY)
+	if previousDifficulty == ProductiveWoW_MEDIUM then
+		ProductiveWoW_addDeckExperience(deckName, ProductiveWoW_DECK_EXPERIENCE.MEDIUM_TO_EASY)
+	elseif previousDifficulty == ProductiveWoW_HARD then
+		ProductiveWoW_addDeckExperience(deckName, ProductiveWoW_DECK_EXPERIENCE.HARD_TO_EASY)
+	else
+		ProductiveWoW_addDeckExperience(deckName, ProductiveWoW_DECK_EXPERIENCE.EASY)
+	end
 end
 
 -- Card was medium difficulty
 function ProductiveWoW_cardMediumDifficultyChosen(cardId)
 	local deckName = ProductiveWoW_getCurrentDeckName()
 	local card = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(cardId)
+	local previousDifficulty = ProductiveWoW_getCardDifficulty(deckName, cardId)
 	card[NUMBER_OF_TIMES_MEDIUM_KEY] = ProductiveWoW_getCardNumberOfTimesMedium(deckName, cardId) + 1
-	ProductiveWoW_setCardDifficulty(deckName, cardId, MEDIUM)
+	ProductiveWoW_setCardDifficulty(deckName, cardId, ProductiveWoW_MEDIUM)
+	if previousDifficulty == ProductiveWoW_EASY then
+		ProductiveWoW_addDeckExperience(deckName, ProductiveWoW_DECK_EXPERIENCE.EASY)
+	elseif previousDifficulty == ProductiveWoW_HARD then
+		ProductiveWoW_addDeckExperience(deckName, ProductiveWoW_DECK_EXPERIENCE.HARD_TO_MEDIUM)
+	else
+		ProductiveWoW_addDeckExperience(deckName, ProductiveWoW_DECK_EXPERIENCE.MEDIUM)
+	end
 end
 
 -- Card was easy
 function ProductiveWoW_cardHardDifficultyChosen(cardId)
 	local deckName = ProductiveWoW_getCurrentDeckName()
 	local card = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(cardId)
+	local previousDifficulty = ProductiveWoW_getCardDifficulty(deckName, cardId)
 	card[NUMBER_OF_TIMES_HARD_KEY] = ProductiveWoW_getCardNumberOfTimesHard(deckName, cardId) + 1
-	ProductiveWoW_setCardDifficulty(deckName, cardId, HARD)
+	ProductiveWoW_setCardDifficulty(deckName, cardId, ProductiveWoW_HARD)
+	if previousDifficulty == ProductiveWoW_EASY then
+		ProductiveWoW_addDeckExperience(deckName, ProductiveWoW_DECK_EXPERIENCE.EASY)
+	elseif previousDifficulty == ProductiveWoW_MEDIUM then
+		ProductiveWoW_addDeckExperience(deckName, ProductiveWoW_DECK_EXPERIENCE.MEDIUM)
+	else
+		ProductiveWoW_addDeckExperience(deckName, ProductiveWoW_DECK_EXPERIENCE.HARD)
+	end
 end
 
 
@@ -746,7 +840,7 @@ local function getDeckSubsetForQuiz()
 	else
 		local maxLimit = tonumber(ProductiveWoW_getDeckDailyNumberOfCards(currentDeckName))
 		-- Prioritize hard
-		local hardCardIds = getCardIdsByDifficulty(currentDeckName, HARD)
+		local hardCardIds = getCardIdsByDifficulty(currentDeckName, ProductiveWoW_HARD)
 		local numberOfHardCards = ProductiveWoW_tableLength(hardCardIds)
 		if numberOfHardCards == maxLimit then
 			return hardCardIds
@@ -757,7 +851,7 @@ local function getDeckSubsetForQuiz()
 			-- If it's smaller than maxLimit we need to add some Medium difficulty cards
 			subset = hardCardIds
 			local remainingLimit = maxLimit - numberOfHardCards
-			local mediumCardIds = getCardIdsByDifficulty(currentDeckName, MEDIUM)
+			local mediumCardIds = getCardIdsByDifficulty(currentDeckName, ProductiveWoW_MEDIUM)
 			local numberOfMediumCards = ProductiveWoW_tableLength(mediumCardIds)
 			if numberOfMediumCards == remainingLimit then
 				subset = ProductiveWoW_mergeTables(subset, mediumCardIds)
@@ -770,7 +864,7 @@ local function getDeckSubsetForQuiz()
 				-- If it's still smaller, add in the Easy cards
 				subset = ProductiveWoW_mergeTables(subset, mediumCardIds)
 				remainingLimit = remainingLimit - numberOfMediumCards
-				local easyCardIds = getCardIdsByDifficulty(currentDeckName, EASY)
+				local easyCardIds = getCardIdsByDifficulty(currentDeckName, ProductiveWoW_EASY)
 				local numberOfEasyCards = ProductiveWoW_tableLength(easyCardIds)
 				if numberOfEasyCards <= remainingLimit then
 					-- Since this is the final difficulty, we can just add all the easy cards if it's equal or less than the remaining limit
@@ -866,7 +960,8 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 			ProductiveWoW_showMainMenu()
 			-- Print changelog message for newer versions of the addon just being installed
 			if userJustUpdatedToNewVersionOfAddon == true then
-				print("ProductiveWoW what's new in version " .. ProductiveWoW_ADDON_VERSION .. ": Added deck reminders feature. Go to Modify Deck > Deck Settings to choose when to receive reminders in the chat. You can also toggle all reminders on/off through the Main Menu > Settings. Leave a comment on Curse if you'd like to see more events that trigger reminders.")
+				print("ProductiveWoW what's new in version " .. ProductiveWoW_ADDON_VERSION .. ": Added deck reminders feature. Go to Modify Deck > Deck Settings to choose when to receive reminders in the chat. You can also toggle all reminders on/off through the Main Menu > Settings. Leave a comment on Curse if you'd like to see more events that trigger reminders. Each deck also has levels now, play the decks to gain experience and level them up.")
+				userJustUpdatedToNewVersionOfAddon = false
 			end
 		end
 	end
