@@ -103,6 +103,8 @@ commonFrameAttributes.basicFrameTitleOffsetXFromTopLeft = 5
 commonFrameAttributes.basicFrameTitleOffsetYFromTopLeft = -5
 commonFrameAttributes.basicButtonWidth = 100
 commonFrameAttributes.basicButtonHeight = 30
+commonFrameAttributes.checkboxWidth = 25
+commonFrameAttributes.checkboxHeight = 25
 
 -- Event handler frame that is always on and invisible that needs to be there to respond to game events
 local eventHandler = nil
@@ -670,7 +672,7 @@ local addonSettingsFrame = {}
 addonSettingsFrame.frameName = "AddonSettingsFrame"
 addonSettingsFrame.frameTitle = ProductiveWoW_ADDON_NAME .. " Settings"
 addonSettingsFrame.width = commonFrameAttributes.basicFrameWidth + 100
-addonSettingsFrame.height = commonFrameAttributes.basicFrameHeight + 50
+addonSettingsFrame.height = commonFrameAttributes.basicFrameHeight + 70
 -- Navigate back to main menu button
 addonSettingsFrame.navigateBackToMainMenuButtonName = "NavigateBackToMainMenuFromAddonSettingsButton"
 addonSettingsFrame.navigateBackToMainMenuButtonText = "Main Menu"
@@ -762,7 +764,18 @@ addonSettingsFrame.deckRemindersCheckboxAnchor = ANCHOR_POINTS.TOPLEFT
 addonSettingsFrame.deckRemindersCheckboxParentAnchor = ANCHOR_POINTS.TOPLEFT
 addonSettingsFrame.deckRemindersCheckboxXOffset = 232
 addonSettingsFrame.deckRemindersCheckboxYOffset = -116
-
+-- Flip question answer checkbox text
+addonSettingsFrame.flipQuestionAnswerCheckboxTextAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.flipQuestionAnswerCheckboxTextParentAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.flipQuestionAnswerCheckboxTextXOffset = 20
+addonSettingsFrame.flipQuestionAnswerCheckboxTextYOffset = -140
+addonSettingsFrame.flipQuestionAnswerCheckboxTextValue = "Reverse question/answer: "
+-- Flip question answer checkbox
+addonSettingsFrame.flipQuestionAnswerCheckboxName = "AddonSettingsFlipQuestionAnswerChecbox"
+addonSettingsFrame.flipQuestionAnswerCheckboxAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.flipQuestionAnswerCheckboxParentAnchor = ANCHOR_POINTS.TOPLEFT
+addonSettingsFrame.flipQuestionAnswerCheckboxXOffset = 232
+addonSettingsFrame.flipQuestionAnswerCheckboxYOffset = -136
 
 -- FUNCTIONS
 --------------------------------------------------------------------------------------------------------------------------------
@@ -1431,9 +1444,6 @@ local function configureModifyDeckFrame()
 		      			root:CreateButton(modifyDeckFrame.rowRightClickMenuDeleteCardText, function() modifyDeckFrame.deleteCardButtonOnClick(rowFrame.cardId) end)
 		      			root:CreateButton(modifyDeckFrame.rowRightClickMenuCardStatsText, function() modifyDeckFrame.cardStatsButtonOnClick(rowFrame.cardId) end)
 		    		end)
-		    		modifyDeckFrame.singleCardSelectedRightClickMenu:HookScript(EVENTS.ON_HIDE, function()
-		    			modifyDeckFrame.unselectRow(rowFrame)
-		    		end)
 		    	else
 		    		modifyDeckFrame.multipleCardsSelectedRightClickMenu = MenuUtil.CreateContextMenu(rowFrame, function(owner, root)
 		      			root:CreateButton(modifyDeckFrame.rowRightClickMenuMultipleCardsDeletionText, function() 
@@ -1826,7 +1836,12 @@ local function configureFlashcardFrame()
 		local currentDeckName = ProductiveWoW_getCurrentDeckName()
 		if currentCardID ~= nil then
 			local currentQuestion = ProductiveWoW_getCardQuestion(currentDeckName, currentCardID)
-			flashcardFrame.displayedText:SetText(currentQuestion)
+			local currentAnswer = ProductiveWoW_getCardAnswer(currentDeckName, currentCardID)
+			if ProductiveWoW_getSavedSettingsFlipQuestionAnswer() == false then
+				flashcardFrame.displayedText:SetText(currentQuestion)
+			else
+				flashcardFrame.displayedText:SetText(currentAnswer)
+			end
 			ProductiveWoW_onViewedCard(currentCardID)
 		end
 	end
@@ -1836,8 +1851,13 @@ local function configureFlashcardFrame()
 		local currentCardID = ProductiveWoW_getCurrentCardID()
 		local currentDeckName = ProductiveWoW_getCurrentDeckName()
 		if currentCardID ~= nil then
+			local currentQuestion = ProductiveWoW_getCardQuestion(currentDeckName, currentCardID)
 			local currentAnswer = ProductiveWoW_getCardAnswer(currentDeckName, currentCardID)
-			flashcardFrame.displayedText:SetText(currentAnswer)
+			if ProductiveWoW_getSavedSettingsFlipQuestionAnswer() == false then
+				flashcardFrame.displayedText:SetText(currentAnswer)
+			else
+				flashcardFrame.displayedText:SetText(currentQuestion)
+			end
 			PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
 		end
 		flashcardFrame.easyDifficultyButton:Show()
@@ -2034,6 +2054,8 @@ local function configureAddonSettingsFrame()
 	addonSettingsFrame.deckRemindersCheckbox = CreateFrame(FRAME_TYPES.CHECKBOX, addonSettingsFrame.deckRemindersCheckboxName, addonSettingsFrame.Frame, FRAME_TEMPLATES.CHAT_CONFIG_CHECK_BUTTON_TEMPLATE)
 	addonSettingsFrame.deckRemindersCheckbox:SetPoint(addonSettingsFrame.deckRemindersCheckboxAnchor, addonSettingsFrame.Frame, addonSettingsFrame.deckRemindersCheckboxParentAnchor, addonSettingsFrame.deckRemindersCheckboxXOffset, addonSettingsFrame.deckRemindersCheckboxYOffset)
 	addonSettingsFrame.deckRemindersCheckbox:SetChecked(ProductiveWoW_getSavedSettingsRemindersEnabled())
+	addonSettingsFrame.deckRemindersCheckbox:SetSize(commonFrameAttributes.checkboxWidth, commonFrameAttributes.checkboxHeight)
+	addonSettingsFrame.deckRemindersCheckbox:SetHitRectInsets(4, 4, 4, 4) -- Make the clickable area the size of the checkbox
 	addonSettingsFrame.deckRemindersCheckbox:SetScript(EVENTS.ON_CLICK, function(self)
 		local enabled = ProductiveWoW_getSavedSettingsRemindersEnabled()
 		if enabled == true then
@@ -2042,6 +2064,25 @@ local function configureAddonSettingsFrame()
 		else
 			ProductiveWoW_setSavedSettingsRemindersEnabled(true)
 			addonSettingsFrame.deckRemindersCheckbox:SetChecked(true)
+		end
+	end)
+
+	-- Flip question/answer checkbox text
+	addonSettingsFrame.flipQuestionAnswerCheckboxText = createText(addonSettingsFrame.flipQuestionAnswerCheckboxTextAnchor, addonSettingsFrame.Frame, addonSettingsFrame.flipQuestionAnswerCheckboxTextParentAnchor, addonSettingsFrame.flipQuestionAnswerCheckboxTextXOffset, addonSettingsFrame.flipQuestionAnswerCheckboxTextYOffset, addonSettingsFrame.flipQuestionAnswerCheckboxTextValue)
+	-- Reminders checkbox
+	addonSettingsFrame.flipQuestionAnswerCheckbox = CreateFrame(FRAME_TYPES.CHECKBOX, addonSettingsFrame.flipQuestionAnswerCheckboxName, addonSettingsFrame.Frame, FRAME_TEMPLATES.CHAT_CONFIG_CHECK_BUTTON_TEMPLATE)
+	addonSettingsFrame.flipQuestionAnswerCheckbox:SetPoint(addonSettingsFrame.flipQuestionAnswerCheckboxAnchor, addonSettingsFrame.Frame, addonSettingsFrame.flipQuestionAnswerCheckboxParentAnchor, addonSettingsFrame.flipQuestionAnswerCheckboxXOffset, addonSettingsFrame.flipQuestionAnswerCheckboxYOffset)
+	addonSettingsFrame.flipQuestionAnswerCheckbox:SetSize(commonFrameAttributes.checkboxWidth, commonFrameAttributes.checkboxHeight)
+	addonSettingsFrame.flipQuestionAnswerCheckbox:SetHitRectInsets(4, 4, 4, 4) -- Make the clickable area the size of the checkbox
+	addonSettingsFrame.flipQuestionAnswerCheckbox:SetChecked(ProductiveWoW_getSavedSettingsFlipQuestionAnswer())
+	addonSettingsFrame.flipQuestionAnswerCheckbox:SetScript(EVENTS.ON_CLICK, function(self)
+		local enabled = ProductiveWoW_getSavedSettingsFlipQuestionAnswer()
+		if enabled == true then
+			ProductiveWoW_setSavedSettingsFlipQuestionAnswer(false)
+			addonSettingsFrame.flipQuestionAnswerCheckbox:SetChecked(false)
+		else
+			ProductiveWoW_setSavedSettingsFlipQuestionAnswer(true)
+			addonSettingsFrame.flipQuestionAnswerCheckbox:SetChecked(true)
 		end
 	end)
 

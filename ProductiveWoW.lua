@@ -33,6 +33,7 @@ local FLASHCARD_FONT_SIZE_KEY = "flashcard font size"
 local FLASHCARD_WIDTH_KEY = "flashcard width"
 local FLASHCARD_HEIGHT_KEY = "flashcard height"
 local ENABLE_REMINDERS_KEY = "enable reminders"
+local FLIP_QUESTION_ANSWER_KEY = "flip question answer"
 local REMINDER_KEY = "reminders"
 local CARDS_KEY = "cards"
 local DECK_LEVEL_KEY = "level"
@@ -99,7 +100,8 @@ local savedSettingsTableInitialValues = {[ADDON_VERSION_KEY] = ProductiveWoW_ADD
 									     [FLASHCARD_FONT_SIZE_KEY] = DEFAULT_FLASHCARD_FONT_SIZE,
 									     [FLASHCARD_WIDTH_KEY] = FLASHCARD_DEFAULT_WIDTH,
 									 	 [FLASHCARD_HEIGHT_KEY] = FLASHCARD_DEFAULT_HEIGHT,
-									 	 [ENABLE_REMINDERS_KEY] = true}
+									 	 [ENABLE_REMINDERS_KEY] = true,
+									 	 [FLIP_QUESTION_ANSWER_KEY] = false}
 local dataTableInitialValues = {[DECKS_KEY] = {}}
 
 
@@ -310,6 +312,11 @@ function ProductiveWoW_getSavedSettingsRemindersEnabled()
 	return ProductiveWoWSavedSettings[ENABLE_REMINDERS_KEY]
 end
 
+-- Get Saved Settings flip question answer
+function ProductiveWoW_getSavedSettingsFlipQuestionAnswer()
+	return ProductiveWoWSavedSettings[FLIP_QUESTION_ANSWER_KEY]
+end
+
 -- Get deck's list of reminders
 function ProductiveWoW_getDeckRemindersTable(deckName)
 	return ProductiveWoW_getDeck(deckName)[REMINDER_KEY]
@@ -514,6 +521,11 @@ end
 -- Set Saved Settings reminders enabled
 function ProductiveWoW_setSavedSettingsRemindersEnabled(newValue)
 	ProductiveWoWSavedSettings[ENABLE_REMINDERS_KEY] = newValue
+end
+
+-- Set Saved Settings flip question answer
+function ProductiveWoW_setSavedSettingsFlipQuestionAnswer(newValue)
+	ProductiveWoWSavedSettings[FLIP_QUESTION_ANSWER_KEY] = newValue
 end
 
 -- Set deck level
@@ -1468,6 +1480,70 @@ if runUnitTests == true then
 	    printResult(testResult, "numberOfDaysSinceDate_futureDate()")
 	end
 
+	function unitTests.ProductiveWoW_getKeyAsString_stringKey()
+	    local tbl = { alpha = "hello", beta = "world" }
+	    local keyStr = ProductiveWoW_getKeyAsString(tbl, "world")
+	    local testResult = (keyStr == "beta")
+	    printResult(testResult, "getKeyAsString_stringKey()")
+	end
+
+	function unitTests.ProductiveWoW_getKeyAsString_numericKey()
+	    local tbl = { [42] = "answer", [99] = "question" }
+	    local keyStr = ProductiveWoW_getKeyAsString(tbl, "answer")
+	    local testResult = (keyStr == "42")
+	    printResult(testResult, "getKeyAsString_numericKey()")
+	end
+
+	function unitTests.ProductiveWoW_getKeyAsString_valueNotFound()
+	    local tbl = { a = "x", b = "y" }
+	    local keyStr = ProductiveWoW_getKeyAsString(tbl, "z")
+	    local testResult = (keyStr == nil)
+	    printResult(testResult, "getKeyAsString_valueNotFound()")
+	end
+
+	function unitTests.ProductiveWoW_getKeyAsString_tableAsKey()
+	    local keyTbl = {}
+	    local tbl = { [keyTbl] = "value" }
+	    local keyStr = ProductiveWoW_getKeyAsString(tbl, "value")
+	    local testResult = (type(keyStr) == "string") -- any stringified key is acceptable here
+	    printResult(testResult, "getKeyAsString_tableAsKey()")
+	end
+
+	function unitTests.ProductiveWoW_getMax_normalCase()
+	    local tbl = {3, 7, 2, 9, 1}
+	    local result = ProductiveWoW_getMax(tbl)
+	    local testResult = (result == 9)
+	    printResult(testResult, "getMax_normalCase()")
+	end
+
+	function unitTests.ProductiveWoW_getMax_allNegatives()
+	    local tbl = {-10, -3, -99, -1}
+	    local result = ProductiveWoW_getMax(tbl)
+	    local testResult = (result == -1)
+	    printResult(testResult, "getMax_allNegatives()")
+	end
+
+	function unitTests.ProductiveWoW_getMax_allSame()
+	    local tbl = {5, 5, 5, 5}
+	    local result = ProductiveWoW_getMax(tbl)
+	    local testResult = (result == 5)
+	    printResult(testResult, "getMax_allSame()")
+	end
+
+	function unitTests.ProductiveWoW_getMax_singleElement()
+	    local tbl = {42}
+	    local result = ProductiveWoW_getMax(tbl)
+	    local testResult = (result == 42)
+	    printResult(testResult, "getMax_singleElement()")
+	end
+
+	function unitTests.ProductiveWoW_getMax_emptyTable()
+	    local tbl = {}
+	    local result = ProductiveWoW_getMax(tbl)
+	    local testResult = (result == nil)
+	    printResult(testResult, "getMax_emptyTable()")
+	end
+
 	unitTests.ProductiveWoW_tableIsArray_testValueIsArray()
 	unitTests.ProductiveWoW_tableIsArray_testValueIsNotArray()
 	unitTests.ProductiveWoW_tableLength_returnsZeroOnEmptyTable()
@@ -1533,6 +1609,15 @@ if runUnitTests == true then
 	unitTests.ProductiveWoW_numberOfDaysSinceDate_sevenDaysAgo()
 	unitTests.ProductiveWoW_numberOfDaysSinceDate_leapYearCheck()
 	unitTests.ProductiveWoW_numberOfDaysSinceDate_futureDate()
+	unitTests.ProductiveWoW_getKeyAsString_stringKey()
+	unitTests.ProductiveWoW_getKeyAsString_numericKey()
+	unitTests.ProductiveWoW_getKeyAsString_valueNotFound()
+	unitTests.ProductiveWoW_getKeyAsString_tableAsKey()
+	unitTests.ProductiveWoW_getMax_normalCase()
+	unitTests.ProductiveWoW_getMax_allNegatives()
+	unitTests.ProductiveWoW_getMax_allSame()
+	unitTests.ProductiveWoW_getMax_singleElement()
+	unitTests.ProductiveWoW_getMax_emptyTable()
 
 	if anyFailed == true then
 		print(toRedText("THERE WAS AT LEAST 1 UNIT TEST THAT FAILED."))

@@ -110,10 +110,20 @@ end
 
 -- Get the string value of a key (reverse lookup)
 function ProductiveWoW_getKeyAsString(tbl, val)
+	local key = nil
+	local countOfMatchingValues = 0
 	for k, v in pairs(tbl) do
 		if v == val then
-			return tostring(k)
+			if countOfMatchingValues == 0 then
+				key = tostring(k)
+			end
+			countOfMatchingValues = countOfMatchingValues + 1
 		end
+	end
+	if countOfMatchingValues >= 2 then
+		error("ProductiveWoW_getKeyAsString: Table had 2 or more matching values.")
+	else
+		return key
 	end
 end
 
@@ -143,10 +153,17 @@ end
 
 -- Get max value in array of integers
 function ProductiveWoW_getMax(tbl)
+	if not ProductiveWoW_tableIsArray(tbl) then
+		error("ProductiveWoW_getMax() table is not an array-type table.")
+	end
 	local currentMax = nil
 	for i, v in ipairs(tbl) do
 		if currentMax == nil or v > currentMax then
-			currentMax = v
+			if type(v) ~= "number" then
+				error("ProductiveWoW_getMax() does not contain only numbers.")
+			else
+				currentMax = v
+			end
 		end
 	end
 	return currentMax
