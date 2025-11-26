@@ -2,11 +2,9 @@
 Refer to the addon's Curse page for installation and usage instructions https://www.curseforge.com/wow/addons/productivewow.
 
 <h1>Contributing</h1>
-I have tried to write the code as clearly and as organized as I can so reading it should hopefully be almost like reading English, you should immediately know what something does.
+I have tried to write the code as clearly and as organized as I can so reading it should hopefully be almost like reading English, you should immediately know what something does. </br>
 
-
-You should know the basics of how WoW addons are created. This addon uses the following principles:
-
+You should know the basics of how WoW addons are created. This addon uses the following principles:</br>
 
 1. No dependencies on external libraries (e.g. no using the Ace3 library). You are free to fork and create a version that does use it.
 2. Comment nearly everything (except very obvious bits of code).
