@@ -20,4 +20,5 @@ You should know the basics of how WoW addons are created. This addon uses the fo
 <li>You'll see this in the UI file, but there is a limitation on how many local variables can be defined so you will see most variables being added to a parent local variable. (e.g. local variable is mainMenu, its width would be mainMenu.width as opposed to mainMenuWidth).</li>
 </ol>
 
-<h2></h2>
+<h2>Overview of How it Works</h2>
+<p></p>
