@@ -1,4 +1,4 @@
--- v1.3.3
+-- v1.3.4
 
 -- DEV AND DEBUG ONLY --
 local resetSavedVariables = false -- Reset ProductiveWoWData and ProductiveWoWSavedSettings
@@ -9,7 +9,7 @@ local runUnitTests = false
 -- GLOBALS --
 --------------------------------------------------------------------------------------------------------------------------------
 ProductiveWoW_ADDON_NAME = "ProductiveWoW"
-ProductiveWoW_ADDON_VERSION = "v1.3.3"
+ProductiveWoW_ADDON_VERSION = "v1.3.4"
 
 
 -- CONSTANTS --
@@ -18,7 +18,7 @@ ProductiveWoW_EASY = "easy" -- Constant string value representing the Easy diffi
 ProductiveWoW_MEDIUM = "medium" -- Constant string value representing the Medium difficulty of a card
 ProductiveWoW_HARD = "hard" -- Constant string value representing the Hard difficulty of a card
 local NEW_DECK_DATE = date("*t", time() - 180000) -- About 2 days before today. This is the initial value of deck["date last played"] when a new deck is created and it has to be 2 days before so that its status is set to "Not Played Today"
-local ALL_CARDS = -1 -- Test on all cards per day
+local ALL_CARDS = 1000000 -- Test on all cards per day
 local DEFAULT_ROW_SCALE = 0.5 -- 50% of max allowed row scale
 local DEFAULT_FLASHCARD_FONT_SIZE = 12
 local FLASHCARD_DEFAULT_WIDTH = 450
@@ -41,6 +41,7 @@ local DECK_EXPERIENCE_KEY = "experience" -- Resets to 0 after each level up, not
 local QUESTION_KEY = "question"
 local ANSWER_KEY = "answer"
 local DIFFICULTY_KEY = "difficulty"
+local CARD_TYPE_KEY = "card type"
 local STARTED_TODAY_KEY = "started today"
 local COMPLETED_TODAY_KEY = "completed today"
 local DATE_LAST_PLAYED_KEY = "date last played"
@@ -56,6 +57,7 @@ local NUMBER_OF_TIMES_HARD_KEY = "number of times hard"
 -- Deck Reminders
 ProductiveWoW_REMINDERS = {}
 ProductiveWoW_REMINDERS.ON_FLIGHT_PATH = "On Flight Path Taken"
+ProductiveWoW_REMINDERS.On_QUEST_ACCEPTED = "On Quest Accepted"
 ProductiveWoW_REMINDERS.ON_QUEST_TURN_IN = "On Quest Turn In"
 ProductiveWoW_REMINDERS.ON_PLAYER_LEVEL_UP = "On Level Up"
 -- Deck experience values
@@ -66,9 +68,14 @@ ProductiveWoW_DECK_EXPERIENCE.HARD = 20
 ProductiveWoW_DECK_EXPERIENCE.MEDIUM_TO_EASY = 30
 ProductiveWoW_DECK_EXPERIENCE.HARD_TO_MEDIUM = 50
 ProductiveWoW_DECK_EXPERIENCE.HARD_TO_EASY = 100
+ProductiveWoW_DECK_EXPERIENCE.TYPED_IN_CORRECT_ANSWER = 50
 -- Deck level experience requirements
-local DECK_LEVELS = {[1]=0, [2]=100, [3]=250, [4]=500, [5]=1000, [6]=2000, [7]=4000, [8]=8000, [9]=16000, [10]=32000}
+local DECK_LEVELS = {[1]=0, [2]=500, [3]=1000, [4]=2000, [5]=5000, [6]=10000, [7]=17000, [8]=27000, [9]=40000, [10]=100000}
 DECK_LEVELS.MAX_LEVEL = ProductiveWoW_getMax(ProductiveWoW_getKeys(DECK_LEVELS))
+-- Card types
+ProductiveWoW_CARD_TYPES = {}
+ProductiveWoW_CARD_TYPES.BASIC = "Basic"
+ProductiveWoW_CARD_TYPES.TYPE_IN_ANSWER = "Type in Answer"
 
 
 
@@ -76,18 +83,19 @@ DECK_LEVELS.MAX_LEVEL = ProductiveWoW_getMax(ProductiveWoW_getKeys(DECK_LEVELS))
 --------------------------------------------------------------------------------------------------------------------------------
 local deckTableDefaultValues = {[CARDS_KEY] = {}, [NEXT_CARD_ID_KEY] = 1, [STARTED_TODAY_KEY] = false, [COMPLETED_TODAY_KEY] = false,
 								[DATE_LAST_PLAYED_KEY] = NEW_DECK_DATE, [LIST_OF_CARDS_REMAINING_TODAY_KEY] = {},
-								[DAILY_NUMBER_OF_CARDS_KEY] = ALL_CARDS, [NUMBER_OF_TIMES_PLAYED_KEY] = 0, [REMINDER_KEY] = {},
+								[DAILY_NUMBER_OF_CARDS_KEY] = 50, [NUMBER_OF_TIMES_PLAYED_KEY] = 0, [REMINDER_KEY] = {},
 								[DECK_LEVEL_KEY] = 1, [DECK_EXPERIENCE_KEY] = 0}
 
 -- CARD VARIABLES -- 
 --------------------------------------------------------------------------------------------------------------------------------
 local cardTableDefaultValues = {[QUESTION_KEY] = "", [ANSWER_KEY] = "", [DIFFICULTY_KEY] = ProductiveWoW_HARD, [DATE_LAST_PLAYED_KEY] = NEW_DECK_DATE,
 								[NUMBER_OF_TIMES_PLAYED_KEY] = 0, [NUMBER_OF_TIMES_EASY_KEY] = 0, [NUMBER_OF_TIMES_MEDIUM_KEY] = 0,
-								[NUMBER_OF_TIMES_HARD_KEY] = 0}
+								[NUMBER_OF_TIMES_HARD_KEY] = 0, [CARD_TYPE_KEY] = ProductiveWoW_CARD_TYPES.BASIC}
 
 -- QUIZ VARIABLES -- 
 --------------------------------------------------------------------------------------------------------------------------------
 ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs = {} -- When you press "Go" to start the quiz, this table stores the subset of Card IDs from the deck that is being quizzed
+ProductiveWoW_cardIdsNotCurrentlyBeingQuizzed = {} -- List of card IDs in deck that are not part of the daily subset being quizzed
 local currentCardID = nil -- Tracks the Card ID of the current card being shown to the user in the quiz
 local timeWhenDeckCanBePlayedAgain = 10 -- Each new day, the deck can be played again at 10am regardless if 24h has passed or not
 
@@ -168,7 +176,12 @@ end
 
 -- Get deck's cards by deck name
 function ProductiveWoW_getDeckCards(deckName)
-	return ProductiveWoWData[DECKS_KEY][deckName][CARDS_KEY]
+	local deck = ProductiveWoW_getDeck(deckName)
+	if deck ~= nil then
+		return ProductiveWoWData[DECKS_KEY][deckName][CARDS_KEY]
+	else
+		return nil
+	end
 end
 
 -- Get deck's next Card ID
@@ -213,10 +226,15 @@ end
 
 -- Get card by question
 function ProductiveWoW_getCardByQuestion(deckName, question)
-	for cardId, contents in pairs(ProductiveWoW_getDeckCards(deckName)) do
-		if contents[QUESTION_KEY] == question then
-			return contents
+	local deckCards = ProductiveWoW_getDeckCards(deckName)
+	if deckCards ~= nil then
+		for cardId, contents in pairs(deckCards) do
+			if contents[QUESTION_KEY] == question then
+				return contents
+			end
 		end
+	else
+		return nil
 	end
 end
 
@@ -233,6 +251,18 @@ end
 -- Get card's answer
 function ProductiveWoW_getCardAnswer(deckName, cardId)
 	return ProductiveWoW_getCardByID(deckName, cardId)[ANSWER_KEY]
+end
+
+-- Get card type
+function ProductiveWoW_getCardType(deckName, cardId)
+	if deckName ~= nil and cardId ~= nil then
+		local card = ProductiveWoW_getCardByID(deckName, cardId)
+		if card ~= nil then
+			return card[CARD_TYPE_KEY]
+		else
+			return nil
+		end
+	end
 end
 
 -- Get a answer given a card table
@@ -344,6 +374,12 @@ function ProductiveWoW_getDeckReminderOnQuestTurnIn(deckName)
 	return ProductiveWoW_getDeckReminder(deckName, questTurnInReminderKey)
 end
 
+-- Get if a deck has a reminder set on quest accepted
+function ProductiveWoW_getDeckReminderOnQuestAccepted(deckName)
+	local questAcceptedReminderKey = ProductiveWoW_getKeyAsString(ProductiveWoW_REMINDERS, ProductiveWoW_REMINDERS.On_QUEST_ACCEPTED)
+	return ProductiveWoW_getDeckReminder(deckName, questAcceptedReminderKey)
+end
+
 -- Get if a deck has a reminder set on player level up
 function ProductiveWoW_getDeckReminderOnPlayerLevelUp(deckName)
 	local playerLevelUpKey = ProductiveWoW_getKeyAsString(ProductiveWoW_REMINDERS, ProductiveWoW_REMINDERS.ON_PLAYER_LEVEL_UP)
@@ -369,6 +405,17 @@ function ProductiveWoW_anyReminderOnQuestTurnInExists()
 	end
 	return false
 end
+
+-- Check if any decks have reminders when a quest is turned in
+function ProductiveWoW_anyReminderOnQuestAcceptedExists()
+	for deckName, deckTable in pairs(ProductiveWoW_getAllDecks()) do
+		if ProductiveWoW_getDeckReminderOnQuestAccepted(deckName) == true then
+			return true
+		end
+	end
+	return false
+end
+
 
 -- Check if any decks have reminders when the player levels up
 function ProductiveWoW_anyReminderOnPlayerLevelUpExists()
@@ -404,6 +451,20 @@ end
 -- Set the currently selected deck
 function ProductiveWoW_setCurrentlySelectedDeck(deckName)
 	ProductiveWoWSavedSettings[CURRENTLY_SELECTED_DECK_KEY] = deckName
+end
+
+-- Rename deck
+function ProductiveWoW_renameDeck(oldDeckName, newDeckName)
+	local oldDeck = ProductiveWoW_getDeck(oldDeckName)
+	if oldDeck ~= nil then
+		ProductiveWoWData[DECKS_KEY][newDeckName] = ProductiveWoWData[DECKS_KEY][oldDeckName]
+		ProductiveWoWData[DECKS_KEY][oldDeckName] = nil
+		if ProductiveWoW_getCurrentDeckName() == oldDeckName then
+			ProductiveWoW_setCurrentlySelectedDeck(newDeckName)
+		end
+	else
+		return nil
+	end
 end
 
 -- Set deck done for today
@@ -491,6 +552,15 @@ end
 -- Set the card's answer
 function ProductiveWoW_setCardAnswer(deckName, cardId, answer)
 	ProductiveWoW_getCardByID(deckName, cardId)[ANSWER_KEY] = answer
+end
+
+-- Set card type
+function ProductiveWoW_setCardType(deckName, cardId, cardType)
+	if ProductiveWoW_inTable(cardType, ProductiveWoW_CARD_TYPES) then
+		ProductiveWoW_getCardByID(deckName, cardId)[CARD_TYPE_KEY] = cardType
+	else
+		error("Attempted to set invalid card type on card ID: " .. tostring(cardId))
+	end
 end
 
 -- Set Saved Settings addon version
@@ -659,6 +729,20 @@ function ProductiveWoW_sendDeckRemindersOnQuestTurnIn()
 	end
 end
 
+-- Send reminders when quest is accepted for all decks that have it set
+function ProductiveWoW_sendDeckRemindersOnQuestAccepted()
+	local anyReminderSent = false
+	for deckName, deckTable in pairs(ProductiveWoW_getAllDecks()) do
+		if ProductiveWoW_getDeckReminderOnQuestAccepted(deckName) == true and ProductiveWoW_getDeckCompletedToday(deckName) == false then
+			ProductiveWoW_sendDeckReminder(deckName)
+			anyReminderSent = true
+		end
+	end
+	if anyReminderSent == true then
+		PlaySound(REMINDER_SOUND)
+	end
+end
+
 -- Send reminders when the player levels up for all decks that have it set
 function ProductiveWoW_sendDeckRemindersPlayerLevelUp()
 	local anyReminderSent = false
@@ -735,11 +819,12 @@ function ProductiveWoW_cardExistsInBulkImportFile(deckName, cardQuestion)
 end
 
 -- Add a card
-function ProductiveWoW_addCard(deckName, question, answer)
+function ProductiveWoW_addCard(deckName, question, answer, cardType)
 	local nextId = ProductiveWoW_getDeckNextCardId(deckName)
 	ProductiveWoW_getDeckCards(deckName)[nextId] = initializeCardTable()
 	ProductiveWoW_setCardQuestion(deckName, nextId, question)
 	ProductiveWoW_setCardAnswer(deckName, nextId, answer)
+	ProductiveWoW_setCardType(deckName, nextId, cardType)
 	ProductiveWoW_setDeckNextCardId(deckName, nextId + 1)
 end
 
@@ -758,11 +843,14 @@ function ProductiveWoW_deleteCardByQuestion(deckName, question)
 end
 
 -- Increment the views of a card
-function ProductiveWoW_onViewedCard(cardId)
+function ProductiveWoW_onPlayedCard(cardId)
 	local deckName = ProductiveWoW_getCurrentDeckName()
 	local card = ProductiveWoW_getCardByIDForCurrentlySelectedDeck(cardId)
 	card[NUMBER_OF_TIMES_PLAYED_KEY] = ProductiveWoW_getCardNumberOfTimesPlayed(deckName, cardId) + 1
 	ProductiveWoW_setCardDateLastPlayed(deckName, cardId, date("*t"))
+	-- Remove from cards remaining to be played today
+	ProductiveWoW_removeByValue(cardId, ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs)
+	ProductiveWoW_removeByValue(cardId, ProductiveWoW_getDeckListOfRemainingCardsToday(deckName))
 end
 
 -- Card was easy
@@ -779,6 +867,7 @@ function ProductiveWoW_cardEasyDifficultyChosen(cardId)
 	else
 		ProductiveWoW_addDeckExperience(deckName, ProductiveWoW_DECK_EXPERIENCE.EASY)
 	end
+	ProductiveWoW_onPlayedCard(cardId)
 end
 
 -- Card was medium difficulty
@@ -795,6 +884,7 @@ function ProductiveWoW_cardMediumDifficultyChosen(cardId)
 	else
 		ProductiveWoW_addDeckExperience(deckName, ProductiveWoW_DECK_EXPERIENCE.MEDIUM)
 	end
+	ProductiveWoW_onPlayedCard(cardId)
 end
 
 -- Card was easy
@@ -811,6 +901,7 @@ function ProductiveWoW_cardHardDifficultyChosen(cardId)
 	else
 		ProductiveWoW_addDeckExperience(deckName, ProductiveWoW_DECK_EXPERIENCE.HARD)
 	end
+	ProductiveWoW_onPlayedCard(cardId)
 end
 
 
@@ -827,7 +918,7 @@ function ProductiveWoW_importDecks()
 		-- Once deck exists for sure, populate it with newly added cards (if question does not already exist)
 		for question, answer in pairs(cards) do
 			if not ProductiveWoW_questionAlreadyExistsInDeck(question, deckName) then
-				ProductiveWoW_addCard(deckName, question, answer)
+				ProductiveWoW_addCard(deckName, question, answer, ProductiveWoW_CARD_TYPES.BASIC)
 			end
 		end
 		-- Delete cards
@@ -851,6 +942,10 @@ local function getDeckSubsetForQuiz()
 		return ProductiveWoW_getKeys(ProductiveWoW_getDeckCards(currentDeckName)) -- Table of Card IDs
 	else
 		local maxLimit = tonumber(ProductiveWoW_getDeckDailyNumberOfCards(currentDeckName))
+		-- Unlimited cards used to be denoted by maxLimit being equal to -1, for backwards compatibility where older decks may be using -1 still, this fixes issues caused by it
+		if maxLimit < 0 then
+			maxLimit = 1000000
+		end
 		-- Prioritize hard
 		local hardCardIds = getCardIdsByDifficulty(currentDeckName, ProductiveWoW_HARD)
 		local numberOfHardCards = ProductiveWoW_tableLength(hardCardIds)
@@ -898,15 +993,43 @@ function ProductiveWoW_drawRandomNextCard()
 	local numCards = ProductiveWoW_tableLength(ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs)
 	local currentDeckName = ProductiveWoW_getCurrentDeckName()
 	if numCards >= 1 then
-		local randomIndex = math.random(1, numCards)
-		currentCardID = ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs[randomIndex]
-		table.remove(ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs, randomIndex)
-		table.remove(ProductiveWoW_getDeckListOfRemainingCardsToday(currentDeckName), randomIndex)
+		-- It's possible that this card was deleted in the meantime so do a quick check to see that it still exists and if not, replace it
+		local cardHasBeenDeleted = true
+		while cardHasBeenDeleted == true do
+			local randomIndex = math.random(1, numCards)
+			currentCardID = ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs[randomIndex]
+			local currentCard = ProductiveWoW_getCardByID(currentDeckName, currentCardID)
+			if currentCard ~= nil then
+				cardHasBeenDeleted = false
+			else
+				-- Remove the deleted card from the subset
+				ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs[randomIndex] = nil
+				-- Above needs to be contiguous array
+				ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs = ProductiveWoW_sparseArrayIntoContiguousArray(ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs)
+				-- Replace it with a card that has not been deleted
+				local replacementCardId = ProductiveWoW_getRandomCardFromCurrentDeckThatIsNotBeingQuizzed()
+				if replacementCardId ~= nil then
+					currentCardID = replacementCardId
+					return
+				end
+			end
+		end
 	else
 		ProductiveWoW_setDeckCompletedToday(ProductiveWoW_getCurrentDeckName())
 		ProductiveWoW_showMainMenu()
 		print("Congratulations, you completed this for today.")
 	end
+end
+
+-- Get a random card from the current deck that is not already part of the subset of cards being quizzed
+function ProductiveWoW_getRandomCardFromCurrentDeckThatIsNotBeingQuizzed()
+	local numCards = ProductiveWoW_tableLength(ProductiveWoW_cardIdsNotCurrentlyBeingQuizzed)
+	if numCards >= 1 then
+		local randomIndex = math.random(1, numCards)
+		local randomCardId = ProductiveWoW_cardIdsNotCurrentlyBeingQuizzed[randomIndex]
+		return randomCardId
+	end
+	return nil
 end
 
 -- Begin quiz
@@ -920,6 +1043,8 @@ function ProductiveWoW_beginQuiz()
 		-- Pick up where you left off today, for example if you had 10 cards to do today, you did 3 of them in the deck, logged off, logged back in, you'd still have 7 cards left to do
 		ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs = ProductiveWoW_getDeckListOfRemainingCardsToday(currentDeckName)
 	end
+	local allCardIds = ProductiveWoW_getKeys(ProductiveWoW_getDeckCards(ProductiveWoW_getCurrentDeckName()))
+	ProductiveWoW_cardIdsNotCurrentlyBeingQuizzed = ProductiveWoW_getElementsOnlyContainedInFirstTable(allCardIds, ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs)
 	ProductiveWoW_drawRandomNextCard()
 end
 
@@ -972,7 +1097,7 @@ EventUtil.ContinueOnAddOnLoaded(ProductiveWoW_ADDON_NAME, function()
 			ProductiveWoW_showMainMenu()
 			-- Print changelog message for newer versions of the addon just being installed
 			if userJustUpdatedToNewVersionOfAddon == true then
-				print("ProductiveWoW what's new in version " .. ProductiveWoW_ADDON_VERSION .. ": Added deck reminders feature. Go to Modify Deck > Deck Settings to choose when to receive reminders in the chat. You can also toggle all reminders on/off through the Main Menu > Settings. Leave a comment on Curse if you'd like to see more events that trigger reminders. Each deck also has levels now, play the decks to gain experience and level them up.")
+				print("ProductiveWoW what's new in version " .. ProductiveWoW_ADDON_VERSION .. ": New Card Type 'Type in Answer' requires you to type in the answer. Go to Modify Deck > Right click a card and select 'Edit Card' then change the card type there. You can also select multiple cards and click 'Bulk Edit'.")
 				userJustUpdatedToNewVersionOfAddon = false
 			end
 		end

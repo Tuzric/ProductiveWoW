@@ -1,4 +1,4 @@
--- v1.3.3
+-- v1.3.4
 
 -- TABLE FUNCTIONS --
 --------------------------------------------------------------------------------------------------------------------------------
@@ -7,7 +7,9 @@
 function ProductiveWoW_tableLength(tbl)
 	local count = 0
 	for element in pairs(tbl) do
-		count = count + 1
+		if element ~= nil then
+			count = count + 1
+		end
 	end
 	return count
 end
@@ -31,6 +33,17 @@ function ProductiveWoW_tableIsArray(tbl)
 	return ProductiveWoW_tableLength(tbl) == count
 end
 
+-- Converts a sparse array into a contiguous array
+function ProductiveWoW_sparseArrayIntoContiguousArray(tbl)
+	local contiguousArray = {}
+	for key, val in pairs(tbl) do
+		if val ~= nil then
+			table.insert(contiguousArray, val)
+		end
+	end
+	return contiguousArray
+end
+
 -- Check if a value exists in a table's keys
 function ProductiveWoW_inTableKeys(valueToCheck, tbl)
 	for key, value in pairs(tbl) do
@@ -49,6 +62,32 @@ function ProductiveWoW_inTable(valueToCheck, tbl)
 		end
 	end
 	return false
+end
+
+-- Binary search in sorted numerical tables
+function ProductiveWoW_numericalTableBinarySearch(valueToCheck, tbl)
+	local currentIndex = math.floor(ProductiveWoW_tableLength(tbl) / 2)
+	while tbl[currentIndex] ~= valueToCheck do
+		currentIndex = math.floor(currentIndex / 2)
+		if currentIndex == 1 then
+			if tbl[currentIndex] == valueToCheck then
+				return true
+			else
+				return false
+			end
+		end
+	end
+end
+
+-- Return a table that contains only the elements in the first table
+function ProductiveWoW_getElementsOnlyContainedInFirstTable(tbl1, tbl2)
+	local newTbl = {}
+	for key, val in pairs(tbl1) do
+		if ProductiveWoW_inTable(val, tbl2) == false then
+			newTbl[key] = val
+		end
+	end
+	return newTbl
 end
 
 -- Remove an element from an array by value, removes first only, modifies table in place
