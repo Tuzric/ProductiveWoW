@@ -123,12 +123,12 @@ end
 
 -- Returns table1 with table2 concatenated to it
 function ProductiveWoW_mergeTables(tbl1, tbl2)
-	if ProductiveWoW_tableIsArray(tbl1) and ProductiveWoW_tableIsArray(tbl2) then
-		for i, val in ipairs(tbl2) do
+	for key, val in pairs(tbl2) do
+		if val ~= nil then
 			table.insert(tbl1, val)
 		end
-		return tbl1
 	end
+	return tbl1
 end
 
 -- Get random subset of size n from array-type table
@@ -136,8 +136,10 @@ function ProductiveWoW_getRandomSubsetOfArrayTable(tbl, size)
 	if ProductiveWoW_tableLength(tbl) >= size then
 		local tempTable = ProductiveWoW_tableShallowCopy(tbl)
 		local subset = {}
+		local tableSize = nil
 		while size ~= 0 do
-			local randomIndex = math.random(1, size)
+			tableSize = ProductiveWoW_tableLength(tempTable)
+			local randomIndex = math.random(1, tableSize)
 			table.insert(subset, tempTable[randomIndex])
 			table.remove(tempTable, randomIndex)
 			size = size - 1

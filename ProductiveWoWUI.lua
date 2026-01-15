@@ -636,6 +636,12 @@ flashcardFrame.showAnswerButtonText = "Show"
 flashcardFrame.showAnswerButtonAnchor = ANCHOR_POINTS.BOTTOMLEFT
 flashcardFrame.showAnswerButtonXOffset = 20
 flashcardFrame.showAnswerButtonYOffset = 20
+-- Back to question button
+flashcardFrame.showQuestionButtonName = "ShowQuestionButton"
+flashcardFrame.showQuestionButtonText = "Back"
+flashcardFrame.showQuestionButtonAnchor = ANCHOR_POINTS.TOPRIGHT
+flashcardFrame.showQuestionButtonXOffset = -20
+flashcardFrame.showQuestionButtonYOffset = -35
 -- Submit answer button that's only visible if Card Type = "Type in Answer"
 flashcardFrame.submitAnswerButtonName = "SubmitAnswerButton"
 flashcardFrame.submitAnswerButtonText = "Submit"
@@ -2264,6 +2270,7 @@ local function configureFlashcardFrame()
 		flashcardFrame.mediumDifficultyButton:Show()
 		flashcardFrame.hardDifficultyButton:Show()
 		flashcardFrame.showAnswerButton:Hide()
+		flashcardFrame.showQuestionButton:Show()
 		if currentCardType == ProductiveWoW_CARD_TYPES.TYPE_IN_ANSWER then
 			flashcardFrame.answerTextBox:Hide()
 			flashcardFrame.answerTextBox:SetCursorPosition(0)
@@ -2272,6 +2279,36 @@ local function configureFlashcardFrame()
 		end
 	end
 	flashcardFrame.showAnswerButton = createButton(flashcardFrame.showAnswerButtonName, flashcardFrame.Frame, flashcardFrame.showAnswerButtonText, flashcardFrame.showAnswerButtonAnchor, flashcardFrame.showAnswerButtonXOffset, flashcardFrame.showAnswerButtonYOffset, flashcardFrame.showAnswerButtonOnClick)
+
+	-- Back to question button
+	function flashcardFrame.showQuestionButtonOnClick()
+		local currentCardID = ProductiveWoW_getCurrentCardID()
+		local currentDeckName = ProductiveWoW_getCurrentDeckName()
+		local currentCardType = nil
+		if currentCardID ~= nil and currentDeckName ~= nil then
+			local currentQuestion = ProductiveWoW_getCardQuestion(currentDeckName, currentCardID)
+			local currentAnswer = ProductiveWoW_getCardAnswer(currentDeckName, currentCardID)
+			currentCardType = ProductiveWoW_getCardType(currentDeckName, currentCardID)
+			if ProductiveWoW_getSavedSettingsFlipQuestionAnswer() == false then
+				flashcardFrame.displayedText:SetText(currentQuestion)
+			else
+				flashcardFrame.displayedText:SetText(currentAnswer)
+			end
+			PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+		end
+		flashcardFrame.easyDifficultyButton:Hide()
+		flashcardFrame.mediumDifficultyButton:Hide()
+		flashcardFrame.hardDifficultyButton:Hide()
+		flashcardFrame.showAnswerButton:Show()
+		flashcardFrame.showQuestionButton:Hide()
+		if currentCardType == ProductiveWoW_CARD_TYPES.TYPE_IN_ANSWER then
+			flashcardFrame.answerTextBox:Show()
+			flashcardFrame.answerTextBox:SetCursorPosition(0)
+			clearTextBox(flashcardFrame.answerTextBox)
+			flashcardFrame.submitAnswerButton:Show()
+		end
+	end
+	flashcardFrame.showQuestionButton = createButton(flashcardFrame.showQuestionButtonName, flashcardFrame.Frame, flashcardFrame.showQuestionButtonText, flashcardFrame.showQuestionButtonAnchor, flashcardFrame.showQuestionButtonXOffset, flashcardFrame.showQuestionButtonYOffset, flashcardFrame.showQuestionButtonOnClick)
 
 	-- Submit answer button that's only visible if Card Type = "Type in Answer"
 	function flashcardFrame.submitAnswerButtonOnClick(self)
@@ -2323,6 +2360,7 @@ local function configureFlashcardFrame()
 		ProductiveWoW_drawRandomNextCard()
 		flashcardFrame.showNextCard()
 		flashcardFrame.showAnswerButton:Show()
+		flashcardFrame.showQuestionButton:Hide()
 		flashcardFrame.easyDifficultyButton:Hide()
 		flashcardFrame.mediumDifficultyButton:Hide()
 		flashcardFrame.hardDifficultyButton:Hide()
@@ -2419,6 +2457,7 @@ local function configureFlashcardFrame()
 		-- Hide answer textbox that should only be visible if card type = "Type in Answer"
 		flashcardFrame.answerTextBox:Hide()
 		flashcardFrame.answerTextBox:SetCursorPosition(0)
+		flashcardFrame.showQuestionButton:Hide()
 		-- Hide submit answer button that should only be visible if card type = "Type in Answer"
 		-- flashcardFrame.submitAnswerButton:Hide()
 		clearTextBox(flashcardFrame.answerTextBox)

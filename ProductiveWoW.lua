@@ -18,7 +18,7 @@ ProductiveWoW_EASY = "easy" -- Constant string value representing the Easy diffi
 ProductiveWoW_MEDIUM = "medium" -- Constant string value representing the Medium difficulty of a card
 ProductiveWoW_HARD = "hard" -- Constant string value representing the Hard difficulty of a card
 local NEW_DECK_DATE = date("*t", time() - 180000) -- About 2 days before today. This is the initial value of deck["date last played"] when a new deck is created and it has to be 2 days before so that its status is set to "Not Played Today"
-local ALL_CARDS = 1000000 -- Test on all cards per day
+local ALL_CARDS = 10000 -- Test on all cards per day
 local DEFAULT_ROW_SCALE = 0.5 -- 50% of max allowed row scale
 local DEFAULT_FLASHCARD_FONT_SIZE = 12
 local FLASHCARD_DEFAULT_WIDTH = 450
@@ -207,8 +207,7 @@ end
 -- Get deck list of remaining cards to be tested today
 function ProductiveWoW_getDeckListOfRemainingCardsToday(deckName)
 	local remainingCards = ProductiveWoW_getDeck(deckName)[LIST_OF_CARDS_REMAINING_TODAY_KEY]
-	-- Return copy of the table rather than reference to it
-	return ProductiveWoW_tableShallowCopy(remainingCards)
+	return remainingCards
 end
 
 -- Get card by ID
@@ -483,7 +482,8 @@ end
 local function setDeckStartedToday(deckName, cardsRemainingTable)
 	local deck = ProductiveWoW_getDeck(deckName)
 	deck[STARTED_TODAY_KEY] = true
-	deck[LIST_OF_CARDS_REMAINING_TODAY_KEY] = cardsRemainingTable
+	deck[COMPLETED_TODAY_KEY] = false
+	deck[LIST_OF_CARDS_REMAINING_TODAY_KEY] = ProductiveWoW_tableShallowCopy(cardsRemainingTable)
 	deck[DATE_LAST_PLAYED_KEY] = date("*t")
 end
 
@@ -744,7 +744,7 @@ function ProductiveWoW_sendDeckRemindersOnQuestAccepted()
 end
 
 -- Send reminders when the player levels up for all decks that have it set
-function ProductiveWoW_sendDeckRemindersPlayerLevelUp()
+function ProductiveWoW_sendDeckRemindersOnPlayerLevelUp()
 	local anyReminderSent = false
 	for deckName, deckTable in pairs(ProductiveWoW_getAllDecks()) do
 		if ProductiveWoW_getDeckReminderOnPlayerLevelUp(deckName) == true and ProductiveWoW_getDeckCompletedToday(deckName) == false then
@@ -937,52 +937,47 @@ end
 local function getDeckSubsetForQuiz()
 	local currentDeckName = ProductiveWoW_getCurrentDeckName()
 	local subset = {}
-	if ProductiveWoW_getDeckDailyNumberOfCards(currentDeckName) == ALL_CARDS then
-		-- No limit to the number of cards being tested per day
-		return ProductiveWoW_getKeys(ProductiveWoW_getDeckCards(currentDeckName)) -- Table of Card IDs
+	local maxLimit = tonumber(ProductiveWoW_getDeckDailyNumberOfCards(currentDeckName))
+	-- Unlimited cards used to be denoted by maxLimit being equal to -1, for backwards compatibility where older decks may be using -1 still, this fixes issues caused by it
+	if maxLimit < 0 then
+		maxLimit = 1000000
+	end
+	-- Prioritize hard
+	local hardCardIds = getCardIdsByDifficulty(currentDeckName, ProductiveWoW_HARD)
+	local numberOfHardCards = ProductiveWoW_tableLength(hardCardIds)
+	if numberOfHardCards == maxLimit then
+		return hardCardIds
+	elseif numberOfHardCards > maxLimit then
+		subset = ProductiveWoW_getRandomSubsetOfArrayTable(hardCardIds, maxLimit)
+		return subset
 	else
-		local maxLimit = tonumber(ProductiveWoW_getDeckDailyNumberOfCards(currentDeckName))
-		-- Unlimited cards used to be denoted by maxLimit being equal to -1, for backwards compatibility where older decks may be using -1 still, this fixes issues caused by it
-		if maxLimit < 0 then
-			maxLimit = 1000000
-		end
-		-- Prioritize hard
-		local hardCardIds = getCardIdsByDifficulty(currentDeckName, ProductiveWoW_HARD)
-		local numberOfHardCards = ProductiveWoW_tableLength(hardCardIds)
-		if numberOfHardCards == maxLimit then
-			return hardCardIds
-		elseif numberOfHardCards > maxLimit then
-			subset = ProductiveWoW_getRandomSubsetOfArrayTable(hardCardIds, maxLimit)
+		-- If it's smaller than maxLimit we need to add some Medium difficulty cards
+		subset = hardCardIds
+		local remainingLimit = maxLimit - numberOfHardCards
+		local mediumCardIds = getCardIdsByDifficulty(currentDeckName, ProductiveWoW_MEDIUM)
+		local numberOfMediumCards = ProductiveWoW_tableLength(mediumCardIds)
+		if numberOfMediumCards == remainingLimit then
+			subset = ProductiveWoW_mergeTables(subset, mediumCardIds)
+			return subset
+		elseif numberOfMediumCards > remainingLimit then
+			local mediumCardsSubset = ProductiveWoW_getRandomSubsetOfArrayTable(mediumCardIds, remainingLimit)
+			subset = ProductiveWoW_mergeTables(subset, mediumCardsSubset)
 			return subset
 		else
-			-- If it's smaller than maxLimit we need to add some Medium difficulty cards
-			subset = hardCardIds
-			local remainingLimit = maxLimit - numberOfHardCards
-			local mediumCardIds = getCardIdsByDifficulty(currentDeckName, ProductiveWoW_MEDIUM)
-			local numberOfMediumCards = ProductiveWoW_tableLength(mediumCardIds)
-			if numberOfMediumCards == remainingLimit then
-				subset = ProductiveWoW_mergeTables(subset, mediumCardIds)
-				return subset
-			elseif numberOfMediumCards > remainingLimit then
-				local mediumCardsSubset = ProductiveWoW_getRandomSubsetOfArrayTable(mediumCardIds, remainingLimit)
-				subset = ProductiveWoW_mergeTables(subset, mediumCardsSubset)
+			-- If it's still smaller, add in the Easy cards
+			subset = ProductiveWoW_mergeTables(subset, mediumCardIds)
+			remainingLimit = remainingLimit - numberOfMediumCards
+			local easyCardIds = getCardIdsByDifficulty(currentDeckName, ProductiveWoW_EASY)
+			local numberOfEasyCards = ProductiveWoW_tableLength(easyCardIds)
+			if numberOfEasyCards <= remainingLimit then
+				-- Since this is the final difficulty, we can just add all the easy cards if it's equal or less than the remaining limit
+				subset = ProductiveWoW_mergeTables(subset, easyCardIds)
 				return subset
 			else
-				-- If it's still smaller, add in the Easy cards
-				subset = ProductiveWoW_mergeTables(subset, mediumCardIds)
-				remainingLimit = remainingLimit - numberOfMediumCards
-				local easyCardIds = getCardIdsByDifficulty(currentDeckName, ProductiveWoW_EASY)
-				local numberOfEasyCards = ProductiveWoW_tableLength(easyCardIds)
-				if numberOfEasyCards <= remainingLimit then
-					-- Since this is the final difficulty, we can just add all the easy cards if it's equal or less than the remaining limit
-					subset = ProductiveWoW_mergeTables(subset, easyCardIds)
-					return subset
-				else
-					-- If there are more easy cards than the remaining limit allows, get a random subset of them
-					local easyCardsSubset = ProductiveWoW_getRandomSubsetOfArrayTable(easyCardIds, remainingLimit)
-					subset = ProductiveWoW_mergeTables(subset, easyCardsSubset)
-					return subset
-				end
+				-- If there are more easy cards than the remaining limit allows, get a random subset of them
+				local easyCardsSubset = ProductiveWoW_getRandomSubsetOfArrayTable(easyCardIds, remainingLimit)
+				subset = ProductiveWoW_mergeTables(subset, easyCardsSubset)
+				return subset
 			end
 		end
 	end

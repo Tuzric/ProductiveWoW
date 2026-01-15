@@ -82,6 +82,7 @@ ProductiveWoW_ankiDeckName = ""
 -- Paste contents between the 2 square brackets. E.g. [[contents]]. It can span multiple lines.
 local ankiContents = [[]]
 
+
 local function split(str, separator)
     local result = {}
     for part in string.gmatch(str, "([^" .. separator .. "]+)") do
