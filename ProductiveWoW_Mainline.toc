@@ -1,4 +1,4 @@
-## Interface: 110207
+## Interface: 120001
 ## Title: ProductiveWoW
 ## Notes: Spaced repetition flashcards for studying while playing. Use /flashcards or /fc
 ## Author: Tuzric

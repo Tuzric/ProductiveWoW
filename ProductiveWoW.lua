@@ -487,6 +487,11 @@ local function setDeckStartedToday(deckName, cardsRemainingTable)
 	deck[DATE_LAST_PLAYED_KEY] = date("*t")
 end
 
+function ProductiveWoW_setDeckListOfRemainingCardsToday(deckName, cardsRemainingTable)
+	deck = ProductiveWoW_getDeck(deckName)
+	deck[LIST_OF_CARDS_REMAINING_TODAY_KEY] = ProductiveWoW_tableShallowCopy(cardsRemainingTable)
+end
+
 -- Set max daily cards value for deck
 function ProductiveWoW_setMaxDailyCardsForDeck(deckName, maxDailyCards)
 	local deck = ProductiveWoW_getDeck(deckName)
@@ -849,6 +854,11 @@ function ProductiveWoW_onPlayedCard(cardId)
 	card[NUMBER_OF_TIMES_PLAYED_KEY] = ProductiveWoW_getCardNumberOfTimesPlayed(deckName, cardId) + 1
 	ProductiveWoW_setCardDateLastPlayed(deckName, cardId, date("*t"))
 	-- Remove from cards remaining to be played today
+	ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs = ProductiveWoW_sparseArrayIntoContiguousArray(ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs)
+	deckRemainingCards = ProductiveWoW_getDeckListOfRemainingCardsToday(deckName)
+	deckRemainingCards = ProductiveWoW_sparseArrayIntoContiguousArray(deckRemainingCards)
+	ProductiveWoW_setDeckListOfRemainingCardsToday(deckName, deckRemainingCards)
+	-- removeByValue() requires the lists to be contiguous instead of sparse, i.e. no "nil" values between any 2 actual values in the array
 	ProductiveWoW_removeByValue(cardId, ProductiveWoW_currentSubsetOfCardsBeingQuizzedIDs)
 	ProductiveWoW_removeByValue(cardId, ProductiveWoW_getDeckListOfRemainingCardsToday(deckName))
 end
